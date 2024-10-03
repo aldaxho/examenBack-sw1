@@ -1,10 +1,21 @@
 // models/diagrama.js
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Diagrama extends Model {
     static associate(models) {
-      // Definir asociaciones aquí si es necesario
+      // Definir asociaciones aquí
+      Diagrama.belongsToMany(models.Usuario, {
+        through: models.DiagramaUsuario,
+        foreignKey: 'diagramaId',
+        otherKey: 'usuarioId',
+      });
+         // Relación belongsTo para indicar que un diagrama tiene un propietario (un solo Usuario)
+         Diagrama.belongsTo(models.Usuario, {
+          as: 'propietario',  // Alias para diferenciar el propietario
+          foreignKey: 'usuarioId',  // La columna que guarda el ID del propietario
+        });
     }
   }
 
@@ -22,12 +33,16 @@ module.exports = (sequelize, DataTypes) => {
     contenido: {
       type: DataTypes.JSONB, // Asegúrate de que el contenido sea un objeto JSON válido
       allowNull: false,
-      defaultValue: {} // Valor predeterminado como objeto vacío
+      defaultValue: {}, // Valor predeterminado como objeto vacío
     },
     usuarioId: {
       type: DataTypes.UUID,
       allowNull: false, // Asegúrate de que este campo esté siempre presente
-    }
+      references: {
+        model: 'Usuario', // Nombre del modelo referenciado
+        key: 'id',
+      },
+    },
   }, {
     sequelize,
     modelName: 'Diagrama',

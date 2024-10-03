@@ -1,0 +1,1 @@
+// Código del modelo clase_intermedia
