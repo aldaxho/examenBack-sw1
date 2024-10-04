@@ -21,7 +21,7 @@ const port = process.env.PORT || 3001;
 const server = http.createServer(app);
 // Configuración de CORS para Express
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'], // Permite solicitudes solo desde tu frontend
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://18.223.131.235:3000'], // Permite solicitudes solo desde tu frontend
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true // Permite el envío de credenciales (cookies, headers de autenticación)
 }));
@@ -474,7 +474,7 @@ function capitalize(str) {
 
 const io = socketIo(server,{
   cors:{
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://18.223.131.235:3000'],
     methods:['GET', 'POST'],
     credentials: true 
   }
