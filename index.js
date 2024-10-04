@@ -31,14 +31,21 @@ app.use(express.json());
 
 
 
-app.post('/generate-backend', async (req, res) => {
+
+
+app.post('/api/generate-backend', async (req, res) => {
   const { diagramaJSON } = req.body;
   console.log('Diagrama JSON recibido:', diagramaJSON);
 
   try {
-    // Generar el prompt que se enviará a OpenAI
-    const prompt = `Eres un programador experto en Spring Boot. Te paso el siguiente archivo JSON que contiene la estructura de un diagrama de clases: ${JSON.stringify(diagramaJSON)}. Quiero que generes un backend completo en Spring Boot. Este backend debe tener las siguientes características:
-      
+      // Asegúrate de que la función capitalize está definida
+      function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
+  
+      // Generar el prompt que se enviará a OpenAI
+      const prompt = `Eres un programador experto en Spring Boot. Te paso el siguiente archivo JSON que contiene la estructura de un diagrama de clases: ${JSON.stringify(diagramaJSON)}. Quiero que generes un backend completo en Spring Boot. Este backend debe tener las siguientes características:
+  
       1. Genera las entidades JPA (modelos) basadas en las clases y sus atributos. Las claves primarias (PK) deben estar anotadas correctamente.
       2. Crea los repositorios JPA para cada entidad.
       3. Crea los servicios para manejar la lógica de negocio.
@@ -47,66 +54,333 @@ app.post('/generate-backend', async (req, res) => {
       6. Organiza el código en carpetas: 'models', 'repositories', 'services', y 'controllers'.
       7. Genera todo como un proyecto de Spring Boot completamente funcional que pueda descargarse como un archivo ZIP.
       8. Asegúrate de que el proyecto esté listo para conectarse a una base de datos PostgreSQL.
-      
-      Aquí está el JSON con la estructura del diagrama: ${JSON.stringify(diagramaJSON)}`;
-
-    // Llamada a la API de OpenAI
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        max_tokens: 5000,
-        temperature: 0.7,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
+  
+      Aquí está el JSON con la estructura del diagrama: ${JSON.stringify(diagramaJSON)};`;
+  
+      // Llamada a la API de OpenAI
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          max_tokens: 5000,
+          temperature: 0.7,
         },
-      }
-    );
-
-    const generatedCode = response.data.choices[0].message.content;
-
-    // Crear la estructura del proyecto
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+  
+      const generatedCode = response.data.choices[0].message.content;
+      // Crear la estructura del proyecto
     const projectPath = path.join(__dirname, 'spring-boot-backend');
     const srcPath = path.join(projectPath, 'src');
     const mainPath = path.join(srcPath, 'main');
     const resourcesPath = path.join(mainPath, 'resources');
     const javaPath = path.join(mainPath, 'java/com/example/demo');
 
-    // Crear las carpetas de estructura
-    const folders = ['models', 'repositories', 'services', 'controllers'];
+    // Crear las carpetas necesarias
+    fs.mkdirSync(javaPath, { recursive: true });
 
-    folders.forEach(folder => {
-      const folderPath = path.join(javaPath, folder);
-      if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
+    // Función para capitalizar
+    function capitalize(str) {
+      if (typeof str !== 'string' || str.length === 0) {
+        return '';
       }
+      str = str.trim();
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // Función para parsear atributos
+    function parseAttribute(attrString) {
+      let name = attrString;
+      let type = 'String'; // Tipo por defecto
+      let isPrimaryKey = false;
+
+      // Detectar si es clave primaria
+      if (attrString.includes('(PK)')) {
+        isPrimaryKey = true;
+        name = attrString.replace('(PK)', '').trim();
+      }
+
+      // Aquí podrías agregar lógica adicional para extraer el tipo si está incluido en el nombre
+      // Por ejemplo, si el atributo es "edad: int", extraer el tipo "int"
+
+      return { name, type, isPrimaryKey };
+    }
+
+    // Procesar dinámicamente las clases del diagrama JSON
+    const classes = diagramaJSON.classes || [];
+    const relations = diagramaJSON.relations || [];
+
+    // Construir un mapa de clases por ID
+    const classMap = {};
+    classes.forEach(entity => {
+      classMap[entity.id] = entity;
+      entity.relations = []; // Inicializar el array de relaciones en cada entidad
     });
+
+    // Procesar relaciones y agregarlas a las entidades correspondientes
+    relations.forEach(relation => {
+      const sourceEntity = classMap[relation.source];
+      const targetEntity = classMap[relation.target];
+
+      if (!sourceEntity || !targetEntity) {
+        console.error('Relación inválida, entidades no encontradas:', relation);
+        return;
+      }
+
+      sourceEntity.relations.push({
+        type: relation.type,
+        target: targetEntity.name.replace(/\s+/g, ''),
+        multiplicidadOrigen: relation.multiplicidadOrigen,
+        multiplicidadDestino: relation.multiplicidadDestino,
+      });
+    });
+
+    classes.forEach((entity) => {
+      const entityName = entity.name.replace(/\s+/g, '');
+
+      // Crear carpeta para la entidad
+      const entityPath = path.join(javaPath, entityName);
+      fs.mkdirSync(entityPath, { recursive: true });
+
+      // Crear subcarpetas: model, repository, service, controller
+      const subfolders = ['model', 'repository', 'service', 'controller'];
+
+      subfolders.forEach(subfolder => {
+        const subfolderPath = path.join(entityPath, subfolder);
+        fs.mkdirSync(subfolderPath, { recursive: true });
+      });
+
+      // Modelo (Entidad)
+      const attributes = Array.isArray(entity.attributes) ? entity.attributes : [];
+      const fields = attributes.map(attrString => {
+        const { name, type, isPrimaryKey } = parseAttribute(attrString);
+        return {
+          name,
+          type,
+          isPrimaryKey,
+        };
+      });
+
+      const fieldsDeclarations = fields.map(field => {
+        if (field.isPrimaryKey) {
+          return `
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long ${field.name};`;
+        } else {
+          return `private ${field.type} ${field.name};`;
+        }
+      }).join('\n    ');
+
+      const gettersSetters = fields.map(field => `
+    public ${field.type} get${capitalize(field.name)}() {
+        return ${field.name};
+    }
+
+    public void set${capitalize(field.name)}(${field.type} ${field.name}) {
+        this.${field.name} = ${field.name};
+    }`).join('\n    ');
+
+      // Procesar relaciones
+      const relationsCode = (entity.relations || []).map(rel => {
+        // Dependiendo del tipo de relación, agregamos las anotaciones correspondientes
+        let relationAnnotation = '';
+        let relationField = '';
+        const targetEntityName = rel.target;
+
+        if (rel.type === 'Asociación' || rel.type === 'Uno a Muchos') {
+          relationAnnotation = `@OneToMany(mappedBy = "${entityName.toLowerCase()}")`;
+          relationField = `private List<${targetEntityName}> ${targetEntityName.toLowerCase()}s = new ArrayList<>();`;
+        } else if (rel.type === 'Muchos a Uno') {
+          relationAnnotation = `@ManyToOne`;
+          relationField = `private ${targetEntityName} ${targetEntityName.toLowerCase()};`;
+        } else if (rel.type === 'Muchos a Muchos') {
+          relationAnnotation = `@ManyToMany`;
+          relationField = `private List<${targetEntityName}> ${targetEntityName.toLowerCase()}s = new ArrayList<>();`;
+        } else if (rel.type === 'Composición') {
+          relationAnnotation = `@OneToOne(cascade = CascadeType.ALL)`;
+          relationField = `private ${targetEntityName} ${targetEntityName.toLowerCase()};`;
+        } else if (rel.type === 'Generalización') {
+          // Para generalización, usamos herencia
+          return `// Hereda de ${targetEntityName}`;
+        }
+
+        return `
+    ${relationAnnotation}
+    ${relationField}
+    `;
+      }).join('\n    ');
+
+      // Para generalización (herencia)
+      let extendsClause = '';
+      const generalization = (entity.relations || []).find(rel => rel.type === 'Generalización');
+      if (generalization) {
+        extendsClause = ` extends ${generalization.target}`;
+      }
+
+      const modelContent = `
+package com.example.demo.${entityName}.model;
+
+import javax.persistence.*;
+import java.util.*;
+
+@Entity
+${generalization ? '@Inheritance(strategy = InheritanceType.JOINED)' : ''}
+public class ${entityName}${extendsClause} {
+    ${fieldsDeclarations}
+
+    // Relaciones
+    ${relationsCode}
+
+    public ${entityName}() {}
+
+    ${gettersSetters}
+}
+`;
+      fs.writeFileSync(path.join(entityPath, 'model', `${entityName}.java`), modelContent);
+
+      // Repositorio
+      const repositoryContent = `
+package com.example.demo.${entityName}.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import com.example.demo.${entityName}.model.${entityName};
+
+public interface ${entityName}Repository extends JpaRepository<${entityName}, Long> {
+}
+`;
+      fs.writeFileSync(path.join(entityPath, 'repository', `${entityName}Repository.java`), repositoryContent);
+
+      // Servicio
+      const serviceContent = `
+package com.example.demo.${entityName}.service;
+
+import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.example.demo.${entityName}.model.${entityName};
+import com.example.demo.${entityName}.repository.${entityName}Repository;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class ${entityName}Service {
+    @Autowired
+    private ${entityName}Repository repository;
+
+    public List<${entityName}> findAll() {
+        return repository.findAll();
+    }
+
+    public Optional<${entityName}> findById(Long id) {
+        return repository.findById(id);
+    }
+
+    public ${entityName} save(${entityName} ${entityName.toLowerCase()}) {
+        return repository.save(${entityName.toLowerCase()});
+    }
+
+    public void deleteById(Long id) {
+        repository.deleteById(id);
+    }
+}
+`;
+      fs.writeFileSync(path.join(entityPath, 'service', `${entityName}Service.java`), serviceContent);
+
+      // Controlador
+      const controllerContent = `
+package com.example.demo.${entityName}.controller;
+
+import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.example.demo.${entityName}.model.${entityName};
+import com.example.demo.${entityName}.service.${entityName}Service;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/${entityName.toLowerCase()}")
+public class ${entityName}Controller {
+
+    @Autowired
+    private ${entityName}Service service;
+
+    @GetMapping
+    public List<${entityName}> getAll() {
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public ${entityName} getById(@PathVariable Long id) {
+        return service.findById(id).orElse(null);
+    }
+
+    @PostMapping
+    public ${entityName} create(@RequestBody ${entityName} ${entityName.toLowerCase()}) {
+        return service.save(${entityName.toLowerCase()});
+    }
+
+    @PutMapping("/{id}")
+    public ${entityName} update(@PathVariable Long id, @RequestBody ${entityName} ${entityName.toLowerCase()}) {
+        ${entityName.toLowerCase()}.setId(id);
+        return service.save(${entityName.toLowerCase()});
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {
+        service.deleteById(id);
+    }
+}
+`;
+      fs.writeFileSync(path.join(entityPath, 'controller', `${entityName}Controller.java`), controllerContent);
+    });
+
+    // Crear la clase principal de la aplicación
+    const applicationContent = `
+package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class SpringBootBackendApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(SpringBootBackendApplication.class, args);
+    }
+}
+`;
+    fs.writeFileSync(path.join(javaPath, 'SpringBootBackendApplication.java'), applicationContent);
 
     // Crear el archivo pom.xml con dependencias PostgreSQL
     const pomContent = `
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>com.example</groupId>
     <artifactId>spring-boot-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
     <name>spring-boot-backend</name>
-    <description>Demo project for Spring Boot</description>
+    <description>Spring Boot Backend</description>
+    <packaging>jar</packaging>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>2.6.2</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <properties>
@@ -114,22 +388,26 @@ app.post('/generate-backend', async (req, res) => {
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-
+        <!-- Spring Boot Starter Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Spring Boot Starter Data JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL Driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Spring Boot Starter Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -139,6 +417,7 @@ app.post('/generate-backend', async (req, res) => {
 
     <build>
         <plugins>
+            <!-- Spring Boot Maven Plugin -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -159,92 +438,6 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 `;
     fs.mkdirSync(resourcesPath, { recursive: true });
     fs.writeFileSync(path.join(resourcesPath, 'application.properties'), propertiesContent);
-
-    // Crear archivos para cada entidad (modelo, repositorio, servicio y controlador)
-    const entities = ['Persona', 'Auto', 'AsociacionTaxis', 'ClaseIntermedia'];
-
-    entities.forEach(entity => {
-      // Modelos
-      const modelContent = `
-package com.example.demo.models;
-
-import javax.persistence.*;
-
-@Entity
-public class ${entity} {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    // Agregar atributos según tu diagrama
-
-    public ${entity}() {}
-    // Getters y Setters
-}
-`;
-      fs.writeFileSync(path.join(javaPath, 'models', `${entity}.java`), modelContent);
-
-      // Repositorios
-      const repositoryContent = `
-package com.example.demo.repositories;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import com.example.demo.models.${entity};
-
-public interface ${entity}Repository extends JpaRepository<${entity}, Long> {
-}
-`;
-      fs.writeFileSync(path.join(javaPath, 'repositories', `${entity}Repository.java`), repositoryContent);
-
-      // Servicios
-      const serviceContent = `
-package com.example.demo.services;
-
-import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.example.demo.repositories.${entity}Repository;
-import java.util.List;
-
-@Service
-public class ${entity}Service {
-    @Autowired
-    private ${entity}Repository repository;
-
-    public List<${entity}> findAll() {
-        return repository.findAll();
-    }
-
-    // Otros métodos según sea necesario
-}
-`;
-      fs.writeFileSync(path.join(javaPath, 'services', `${entity}Service.java`), serviceContent);
-
-      // Controladores
-      const controllerContent = `
-package com.example.demo.controllers;
-
-import org.springframework.web.bind.annotation.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.example.demo.services.${entity}Service;
-import java.util.List;
-
-@RestController
-@RequestMapping("/api/${entity.toLowerCase()}")
-public class ${entity}Controller {
-
-    @Autowired
-    private ${entity}Service service;
-
-    @GetMapping
-    public List<${entity}> getAll() {
-        return service.findAll();
-    }
-
-    // Otros endpoints según sea necesario
-}
-`;
-      fs.writeFileSync(path.join(javaPath, 'controllers', `${entity}Controller.java`), controllerContent);
-    });
 
     // Generar el archivo ZIP
     const output = fs.createWriteStream(path.join(__dirname, 'spring-boot-backend.zip'));
@@ -267,12 +460,16 @@ public class ${entity}Controller {
     // Finaliza el archivo ZIP
     archive.pipe(output);
     archive.finalize();
-
   } catch (error) {
-    console.error('Error al comunicarse con la API de OpenAI:', error);
-    res.status(500).send('Error al obtener respuesta de OpenAI');
+    console.error('Error al generar el backend:', error);
+    res.status(500).send('Error al generar el backend');
   }
 });
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 
 
 const io = socketIo(server,{

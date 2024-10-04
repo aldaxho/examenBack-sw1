@@ -1,1 +1,0 @@
-// Código del repositorio clase_intermedia
