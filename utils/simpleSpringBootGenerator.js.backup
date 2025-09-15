@@ -46,7 +46,6 @@ async function generateSimpleSpringBootProject(diagramaJSON, titulo) {
   const relations = diagramaJSON.relations || [];
   
   // Procesar clases y crear mapeo
-  if (diagramaJSON.classes) {
     for (const clase of diagramaJSON.classes) {
       const entityName = cleanClassName(clase.name) || `Entity${entities.length + 1}`;
       entities.push(entityName);
@@ -119,22 +118,53 @@ function parseAttribute(attr) {
     
     // Separar nombre y tipo
     const parts = cleanAttr.split(':');
-    const name = parts[0].trim();
+    let name = parts[0].trim();
     const type = parts[1] ? parts[1].trim() : 'String';
+    
+    // Limpiar el nombre del campo para que sea válido en Java
+    name = cleanFieldName(name);
     
     return { name, type, isPrimaryKey };
   } else if (typeof attr === 'object') {
     // Si es objeto, usar las propiedades directamente
-    const name = attr.name || 'field';
+    let name = attr.name || 'field';
     const type = attr.type || 'String';
     const isPrimaryKey = attr.isPrimaryKey || (name.toLowerCase().includes('id') && 
                         (name.toLowerCase() === 'id' || name.toLowerCase().endsWith('id')));
+    
+    // Limpiar el nombre del campo para que sea válido en Java
+    name = cleanFieldName(name);
     
     return { name, type, isPrimaryKey };
   }
   
   // Fallback
   return { name: 'field', type: 'String', isPrimaryKey: false };
+}
+
+// Función para limpiar nombres de campos Java
+function cleanFieldName(name) {
+  if (!name) return 'field';
+  
+  // Remover caracteres especiales y espacios, mantener solo letras, números y guiones bajos
+  let cleanName = name.replace(/[^a-zA-Z0-9_]/g, '');
+  
+  // Si el nombre empieza con número, agregar prefijo
+  if (/^[0-9]/.test(cleanName)) {
+    cleanName = 'field' + cleanName;
+  }
+  
+  // Si está vacío después de la limpieza, usar nombre por defecto
+  if (!cleanName || cleanName.length === 0) {
+    cleanName = 'field';
+  }
+  
+  // Convertir a camelCase si contiene guiones bajos
+  if (cleanName.includes('_')) {
+    cleanName = cleanName.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
+  }
+  
+  return cleanName;
 }
 
 // Función para mapear tipos Java
@@ -176,14 +206,29 @@ public class ${entityName} {
     private Long id;
 `;
 
-  // Llevar registro de los campos de relación que realmente se crean
-  const relationFields = [];
-  const usedColumnNames = new Set(); // Para evitar nombres de columna duplicados
+  // Agregar atributos básicos
+  if (clase.attributes && clase.attributes.length > 0) {
+    clase.attributes.forEach(attr => {
+      const { name, type, isPrimaryKey } = parseAttribute(attr);
+      // NO generar campos 'id' duplicados - ya tenemos el campo JPA @Id
+      if (!isPrimaryKey && name && !name.toLowerCase().includes('id_class') && !name.toLowerCase().includes('id_persona') && name.toLowerCase() !== 'id') {
+        const javaType = mapJavaType(type);
+        const columnName = getUniqueColumnName(name.toLowerCase());
+        entityContent += `
+    @Column(name = "${columnName}")
+    private ${javaType} ${name};`;
+      }
+    });
+  }
 
   // Agregar relaciones JPA
   const entityRelations = relations.filter(rel => 
     rel.source === clase.id || rel.target === clase.id
   );
+
+  // Llevar registro de los campos de relación que realmente se crean
+  const relationFields = [];
+  const usedColumnNames = new Set(); // Para evitar nombres de columna duplicados
 
   // Función para generar nombres de columna únicos
   function getUniqueColumnName(baseName) {
@@ -215,13 +260,7 @@ public class ${entityName} {
     clase.attributes.forEach(attr => {
       const { name, type, isPrimaryKey } = parseAttribute(attr);
       // NO generar campos 'id' duplicados - ya tenemos el campo JPA @Id
-      // También evitar nombres que puedan causar conflictos con relaciones
-      if (!isPrimaryKey && name && 
-          !name.toLowerCase().includes('id_class') && 
-          !name.toLowerCase().includes('id_persona') && 
-          name.toLowerCase() !== 'id' &&
-          !name.toLowerCase().endsWith('_id') &&
-          !usedColumnNames.has(name.toLowerCase())) {
+      if (!isPrimaryKey && name && !name.toLowerCase().includes('id_class') && !name.toLowerCase().includes('id_persona') && name.toLowerCase() !== 'id') {
         const javaType = mapJavaType(type);
         const columnName = getUniqueColumnName(name.toLowerCase());
         entityContent += `
@@ -279,10 +318,9 @@ public class ${entityName} {
     private List<${relatedEntityName}> ${fieldName}List = new ArrayList<>();`;
             relationFields.push({ name: `${fieldName}List`, type: `List<${relatedEntityName}>`, isList: true, relatedEntity: relatedEntityName });
           } else if (!isSource) {
-            const columnName = getUniqueColumnName(`${relatedEntityName.toLowerCase()}_id`);
             entityContent += `
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "${columnName}")
+    @JoinColumn(name = "${entityName.toLowerCase()}_id")
     @JsonIgnoreProperties("${fieldName}List")
     private ${relatedEntityName} ${fieldName};`;
             relationFields.push({ name: fieldName, type: relatedEntityName, isList: false, relatedEntity: relatedEntityName });
@@ -308,10 +346,9 @@ public class ${entityName} {
     private List<${relatedEntityName}> ${fieldName}List = new ArrayList<>();`;
             relationFields.push({ name: `${fieldName}List`, type: `List<${relatedEntityName}>`, isList: true, relatedEntity: relatedEntityName });
           } else {
-            const columnName = getUniqueColumnName(`${relatedEntityName.toLowerCase()}_id`);
             entityContent += `
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "${columnName}")
+    @JoinColumn(name = "${entityName.toLowerCase()}_id")
     @JsonIgnoreProperties("${fieldName}List")
     private ${relatedEntityName} ${fieldName};`;
             relationFields.push({ name: fieldName, type: relatedEntityName, isList: false, relatedEntity: relatedEntityName });
@@ -335,17 +372,12 @@ public class ${entityName} {
         this.id = id;
     }`;
 
-  // Generar getters y setters para atributos básicos que realmente se crearon
+  // Generar getters y setters para atributos básicos
   if (clase.attributes && clase.attributes.length > 0) {
     clase.attributes.forEach(attr => {
       const { name, type, isPrimaryKey } = parseAttribute(attr);
-      // Solo generar métodos para campos que realmente se crearon (misma lógica que arriba)
-      if (!isPrimaryKey && name && 
-          !name.toLowerCase().includes('id_class') && 
-          !name.toLowerCase().includes('id_persona') && 
-          name.toLowerCase() !== 'id' &&
-          !name.toLowerCase().endsWith('_id') &&
-          !usedColumnNames.has(name.toLowerCase())) {
+      // NO generar métodos para campos 'id' - ya tenemos los métodos JPA
+      if (!isPrimaryKey && name && !name.toLowerCase().includes('id_class') && !name.toLowerCase().includes('id_persona') && name.toLowerCase() !== 'id') {
         const javaType = mapJavaType(type);
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
         entityContent += `

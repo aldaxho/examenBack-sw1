@@ -1,0 +1,332 @@
+{
+  "info": {
+    "name": "Test Duplicate Fields - Spring Boot API",
+    "description": "Colección de pruebas para la API generada automáticamente desde diagrama UML",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string",
+      "description": "URL base de la API"
+    }
+  ],
+  "item": [
+    {
+      "name": "Cliente",
+      "description": "Endpoints para la entidad Cliente",
+      "item": [
+        {
+          "name": "Obtener todos los cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Cliente\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar cliente completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Cliente Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar cliente parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cliente Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cuenta",
+      "description": "Endpoints para la entidad Cuenta",
+      "item": [
+        {
+          "name": "Obtener todos los cuenta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cuenta"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener cuenta por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cuenta",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo cuenta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Cuenta\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cuenta"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar cuenta completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Cuenta Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cuenta",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar cuenta parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cuenta Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cuenta",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar cuenta",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cuenta",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar cuenta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cuenta",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    }
+  ]
+}
