@@ -221,7 +221,7 @@ async function tryOne(url, headers, body) {
 // ---------- Llamada principal ----------
 async function callAgent({ diagram, intent = 'free_chat', user_message = '', forceMock = false }) {
   if (AGENT_MOCK || forceMock) {
-    console.log('🤖 Usando respuesta mock del agente (AGENT_MOCK=true)');
+    console.log('Usando respuesta mock del agente (AGENT_MOCK=true)');
     const timestamp = Date.now();
     const customerId = 'class-' + timestamp;
     const orderId = 'class-' + (timestamp + 1);
@@ -271,7 +271,7 @@ async function callAgent({ diagram, intent = 'free_chat', user_message = '', for
   }
 
   if (!AGENT_URL || !AGENT_TOKEN) {
-    console.log('⚠️ AGENT_URL/AGENT_TOKEN no configurados. Usando modo mock automáticamente.');
+    console.log('AGENT_URL/AGENT_TOKEN no configurados. Usando modo mock automáticamente.');
     return {
       analysis: {
         summary: 'Modo mock activado - configura AGENT_URL y AGENT_TOKEN para usar el agente real',
@@ -289,7 +289,7 @@ async function callAgent({ diagram, intent = 'free_chat', user_message = '', for
     };
   }
 
-  console.log('🔗 Llamando agente en:', AGENT_URL);
+  console.log('Llamando agente en:', AGENT_URL);
 
   const userContent = buildUserPayload({ diagram, intent, user_message });
   const systemPrompt = buildSystemPrompt();
@@ -313,11 +313,11 @@ async function callAgent({ diagram, intent = 'free_chat', user_message = '', for
         if (!res.ok) {
           lastErrText = `(${res.status}) ${url} :: ${txt}`;
           errorAttempts.push(lastErrText);
-          console.log(`❌ Falló ${url}: ${res.status} - ${txt.slice(0, 200)}`);
+          console.log(`Falló ${url}: ${res.status} - ${txt.slice(0, 200)}`);
           continue;
         }
 
-        console.log(`✅ Éxito ${url}: ${res.status}`);
+        console.log(`Éxito ${url}: ${res.status}`);
         let data = {};
         try { data = JSON.parse(txt); } catch {}
         const { contentString, object } = extractAnswer(b.kind, data);
@@ -325,7 +325,7 @@ async function callAgent({ diagram, intent = 'free_chat', user_message = '', for
         if (contentString) {
           const obj = coerceAgentObjectFromText(contentString, { intent });
           if (obj?.analysis || obj?.proposal) {
-            console.log('📄 Normalizado a objeto de agente (analysis/proposal).');
+            console.log('Normalizado a objeto de agente (analysis/proposal).');
             return obj;
           }
           // Ultra fallback
@@ -333,11 +333,11 @@ async function callAgent({ diagram, intent = 'free_chat', user_message = '', for
         }
 
         if (object) {
-          console.log('📦 Respuesta ya es objeto');
+          console.log('Respuesta ya es objeto');
           return object;
         }
 
-        console.log('🔄 Usando respuesta directa de la API (sin content)');
+        console.log('Usando respuesta directa de la API (sin content)');
         return data;
 
       } catch (e) {

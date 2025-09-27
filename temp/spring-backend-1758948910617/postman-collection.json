@@ -1,0 +1,175 @@
+{
+  "info": {
+    "name": "Sistema de Prueba - Spring Boot API",
+    "description": "Colección de pruebas para la API generada automáticamente desde diagrama UML",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string",
+      "description": "URL base de la API"
+    }
+  ],
+  "item": [
+    {
+      "name": "Persona",
+      "description": "Endpoints para la entidad Persona",
+      "item": [
+        {
+          "name": "Obtener todos los persona",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persona"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener persona por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persona",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo persona",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Persona\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persona"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar persona completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Persona Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persona",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar persona parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Persona Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persona",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar persona",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persona",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar persona",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "persona",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    }
+  ]
+}

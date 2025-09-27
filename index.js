@@ -107,6 +107,10 @@ io.on('connection', (socket) => {
         username: userData.username,
         socketId: socket.id
       });
+      // Emitir presencia actualizada a la sala
+      socket.to(roomId).emit('presence-update', { onlineUsers: onlineUsersArray });
+      // Enviar lista completa al que se une
+      socket.emit('online-users', onlineUsersArray);
       
       // Responder con usuarios conectados
       if (callback) {
@@ -120,6 +124,52 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Alias para join-room enviando objeto { roomId }
+  socket.on('join-diagram', (payload, callback) => {
+    try {
+      const roomId = typeof payload === 'string' ? payload : (payload && payload.roomId);
+      if (!roomId) {
+        if (callback) callback({ error: 'roomId requerido' });
+        return;
+      }
+      // Reutilizar la lógica de unión
+      // Agregar usuario a la sala
+      socket.join(roomId);
+      socket.roomId = roomId;
+
+      if (!onlineUsers.has(roomId)) {
+        onlineUsers.set(roomId, new Map());
+      }
+
+      const roomUsers = onlineUsers.get(roomId);
+      const userData = {
+        socketId: socket.id,
+        userId: socket.userId || socket.id,
+        username: socket.username || `Usuario-${socket.id.substring(0, 8)}`
+      };
+      roomUsers.set(socket.id, userData);
+
+      const onlineUsersArray = getOnlineUsersInRoom(roomId);
+
+      socket.to(roomId).emit('user-joined', {
+        userId: userData.userId,
+        username: userData.username,
+        socketId: socket.id
+      });
+      socket.to(roomId).emit('presence-update', { onlineUsers: onlineUsersArray });
+      socket.emit('online-users', onlineUsersArray);
+
+      if (callback) {
+        callback({ onlineUsers: onlineUsersArray });
+      }
+    } catch (error) {
+      console.error('Error en join-diagram:', error);
+      if (callback) {
+        callback({ error: 'Error al unirse al diagrama' });
+      }
+    }
+  });
+
   // Solicitar usuarios en línea
   socket.on('get-online-users', (roomId, callback) => {
     try {
@@ -127,6 +177,8 @@ io.on('connection', (socket) => {
       if (callback) {
         callback({ users });
       }
+      // Emitir también por evento para compatibilidad
+      socket.emit('online-users', users);
     } catch (error) {
       console.error('Error al obtener usuarios en línea:', error);
       if (callback) {
@@ -217,6 +269,11 @@ io.on('connection', (socket) => {
           if (roomUsers.size === 0) {
             onlineUsers.delete(socket.roomId);
           }
+
+          // Emitir presencia actualizada tras desconexión
+          const onlineUsersArray = getOnlineUsersInRoom(socket.roomId);
+          socket.to(socket.roomId).emit('presence-update', { onlineUsers: onlineUsersArray });
+          socket.to(socket.roomId).emit('online-users', onlineUsersArray);
         }
       }
     } catch (error) {

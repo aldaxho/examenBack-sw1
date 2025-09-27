@@ -7,7 +7,7 @@ const router = express.Router();
 
 // Ruta de prueba sin autenticación
 router.get('/test', (req, res) => {
-  res.json({ message: 'OpenAPI Generator routes working! 🚀' });
+  res.json({ message: 'OpenAPI Generator routes working!' });
 });
 
 // Ruta de prueba para generar proyecto (SIN AUTENTICACIÓN)
@@ -28,7 +28,7 @@ router.post('/test-generate', async (req, res) => {
       ]
     };
     
-    console.log('🧪 Probando generador simple...');
+    console.log('Probando generador simple...');
     const result = await generateSimpleSpringBootProject(testData, 'Test Project');
     
     if (result.success) {

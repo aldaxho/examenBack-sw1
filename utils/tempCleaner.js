@@ -15,7 +15,7 @@ async function cleanupTempFiles() {
     try {
       await fs.access(TEMP_DIR);
     } catch (error) {
-      console.log('📁 Directorio temp no existe, creándolo...');
+      console.log('Directorio temp no existe, creándolo...');
       await fs.mkdir(TEMP_DIR, { recursive: true });
       return;
     }
@@ -37,27 +37,27 @@ async function cleanupTempFiles() {
         if (age > maxAge) {
           if (stats.isDirectory()) {
             await fs.rm(filePath, { recursive: true, force: true });
-            console.log(`🗑️ Directorio eliminado: ${file} (${Math.round(age / (60 * 60 * 1000))}h de antigüedad)`);
+            console.log(`Directorio eliminado: ${file} (${Math.round(age / (60 * 60 * 1000))}h de antigüedad)`);
           } else {
             totalSize += stats.size;
             await fs.unlink(filePath);
-            console.log(`🗑️ Archivo eliminado: ${file} (${Math.round(age / (60 * 60 * 1000))}h de antigüedad)`);
+            console.log(`Archivo eliminado: ${file} (${Math.round(age / (60 * 60 * 1000))}h de antigüedad)`);
           }
           deletedCount++;
         }
       } catch (error) {
-        console.warn(`⚠️ Error procesando ${file}:`, error.message);
+        console.warn(`Error procesando ${file}:`, error.message);
       }
     }
 
     if (deletedCount > 0) {
-      console.log(`✅ Limpieza completada: ${deletedCount} elementos eliminados (${Math.round(totalSize / 1024 / 1024)}MB liberados)`);
+      console.log(`Limpieza completada: ${deletedCount} elementos eliminados (${Math.round(totalSize / 1024 / 1024)}MB liberados)`);
     } else {
-      console.log('✨ Directorio temp limpio - no hay archivos antiguos para eliminar');
+      console.log('Directorio temp limpio - no hay archivos antiguos para eliminar');
     }
 
   } catch (error) {
-    console.error('❌ Error durante limpieza de archivos temporales:', error);
+    console.error('Error durante limpieza de archivos temporales:', error);
   }
 }
 
@@ -71,11 +71,11 @@ function startCleanupScheduler() {
   // Programar limpieza cada hora usando setInterval
   const intervalMs = CLEANUP_INTERVAL_HOURS * 60 * 60 * 1000;
   setInterval(() => {
-    console.log('🧹 Iniciando limpieza programada de archivos temporales...');
+    console.log('Iniciando limpieza programada de archivos temporales...');
     cleanupTempFiles();
   }, intervalMs);
   
-  console.log(`📅 Programador de limpieza temporal iniciado (cada ${CLEANUP_INTERVAL_HOURS} hora${CLEANUP_INTERVAL_HOURS > 1 ? 's' : ''})`);
+  console.log(`Programador de limpieza temporal iniciado (cada ${CLEANUP_INTERVAL_HOURS} hora${CLEANUP_INTERVAL_HOURS > 1 ? 's' : ''})`);
 }
 
 /**
@@ -85,10 +85,10 @@ async function cleanupSpecificDir(dirName) {
   try {
     const dirPath = path.join(TEMP_DIR, dirName);
     await fs.rm(dirPath, { recursive: true, force: true });
-    console.log(`🗑️ Directorio específico eliminado: ${dirName}`);
+    console.log(`Directorio específico eliminado: ${dirName}`);
     return true;
   } catch (error) {
-    console.error(`❌ Error eliminando directorio ${dirName}:`, error);
+    console.error(`Error eliminando directorio ${dirName}:`, error);
     return false;
   }
 }

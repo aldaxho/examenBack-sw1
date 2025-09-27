@@ -1,0 +1,332 @@
+{
+  "info": {
+    "name": "Sistema de Biblioteca - Spring Boot API",
+    "description": "Colección de pruebas para la API generada automáticamente desde diagrama UML",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string",
+      "description": "URL base de la API"
+    }
+  ],
+  "item": [
+    {
+      "name": "Libro",
+      "description": "Endpoints para la entidad Libro",
+      "item": [
+        {
+          "name": "Obtener todos los libro",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "libro"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener libro por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "libro",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo libro",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Libro\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "libro"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar libro completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Libro Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "libro",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar libro parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Libro Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "libro",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar libro",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "libro",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar libro",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "libro",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuario",
+      "description": "Endpoints para la entidad Usuario",
+      "item": [
+        {
+          "name": "Obtener todos los usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuario"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener usuario por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuario",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Usuario\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuario"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar usuario completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Usuario Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuario",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar usuario parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuario Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuario",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuario",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuario",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    }
+  ]
+}

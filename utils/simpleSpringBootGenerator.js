@@ -3,7 +3,7 @@ const path = require('path');
 
 // Función para generar proyecto Spring Boot completo y funcional
 async function generateSimpleSpringBootProject(diagramaJSON, titulo) {
-  console.log('🚀 Generando proyecto Spring Boot completo...');
+  console.log('Generando proyecto Spring Boot completo...');
   
   const cleanTitulo = titulo ? titulo.replace(/[^\w\s]/g, '').trim() : 'Diagrama';
   
@@ -90,9 +90,9 @@ async function generateSimpleSpringBootProject(diagramaJSON, titulo) {
   // Crear colección de Postman para pruebas
   await createPostmanCollection(projectDir, cleanTitulo, entities);
   
-  console.log(`✅ Proyecto Spring Boot generado: ${projectName}`);
-  console.log(`📁 Ubicación: ${projectDir}`);
-  console.log(`📋 Entidades: ${entities.join(', ')}`);
+  console.log(`Proyecto Spring Boot generado: ${projectName}`);
+  console.log(`Ubicación: ${projectDir}`);
+  console.log(`Entidades: ${entities.join(', ')}`);
   
   return {
     success: true,
@@ -344,8 +344,7 @@ public class ${entityName} {
           !name.toLowerCase().includes('id_class') && 
           !name.toLowerCase().includes('id_persona') && 
           name.toLowerCase() !== 'id' &&
-          !name.toLowerCase().endsWith('_id') &&
-          !usedColumnNames.has(name.toLowerCase())) {
+          !name.toLowerCase().endsWith('_id')) {
         const javaType = mapJavaType(type);
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
         entityContent += `
@@ -493,6 +492,56 @@ public interface ${entityName}Repository extends JpaRepository<${entityName}, Lo
   await fs.writeFile(path.join(repositoriesDir, `${entityName}Repository.java`), repositoryContent);
 }
 
+// Función para generar mapeos de campos dinámicamente
+function generateFieldMappings(clase, mappingType) {
+  let mappings = '';
+  
+  // Crear el mismo Set que se usa en createEntityClass para mantener consistencia
+  const usedColumnNames = new Set();
+  
+  if (clase.attributes && clase.attributes.length > 0) {
+    clase.attributes.forEach(attr => {
+      const { name, type, isPrimaryKey } = parseAttribute(attr);
+      
+      // Usar exactamente la misma lógica que en createEntityClass
+      if (!isPrimaryKey && name && 
+          !name.toLowerCase().includes('id_class') && 
+          !name.toLowerCase().includes('id_persona') && 
+          name.toLowerCase() !== 'id' &&
+          !name.toLowerCase().endsWith('_id') &&
+          !usedColumnNames.has(name.toLowerCase())) {
+        
+        // Agregar el nombre a usedColumnNames para mantener consistencia
+        usedColumnNames.add(name.toLowerCase());
+        
+        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+        
+        switch (mappingType) {
+          case 'entityToDTO':
+            mappings += `        dto.set${capitalizedName}(entity.get${capitalizedName}());\n`;
+            break;
+            
+          case 'dtoToEntity':
+            mappings += `        entity.set${capitalizedName}(dto.get${capitalizedName}());\n`;
+            break;
+            
+          case 'updateEntity':
+            mappings += `        entity.set${capitalizedName}(dto.get${capitalizedName}());\n`;
+            break;
+            
+          case 'partialUpdateEntity':
+            mappings += `        if (dto.get${capitalizedName}() != null) {\n`;
+            mappings += `            entity.set${capitalizedName}(dto.get${capitalizedName}());\n`;
+            mappings += `        }\n`;
+            break;
+        }
+      }
+    });
+  }
+  
+  return mappings;
+}
+
 // Crear clase de servicio
 async function createServiceClass(servicesDir, entityName, clase) {
   
@@ -579,8 +628,10 @@ public class ${entityName}Service {
     private ${entityName}DTO convertToDTO(${entityName} entity) {
         ${entityName}DTO dto = new ${entityName}DTO();
         dto.setId(entity.getId());
-        // TODO: Mapear todos los campos específicos de la entidad
-        // Ejemplo: dto.setName(entity.getName());
+        
+        // Mapear todos los campos específicos de la entidad
+        ${generateFieldMappings(clase, 'entityToDTO')}
+        
         return dto;
     }
 
@@ -588,25 +639,28 @@ public class ${entityName}Service {
     private ${entityName} convertToEntity(${entityName}DTO dto) {
         ${entityName} entity = new ${entityName}();
         entity.setId(dto.getId());
-        // TODO: Mapear todos los campos específicos de la entidad
-        // Ejemplo: entity.setName(dto.getName());
+        
+        // Mapear todos los campos específicos del DTO
+        ${generateFieldMappings(clase, 'dtoToEntity')}
+        
         return entity;
     }
 
     // Actualizar Entity desde DTO (completo)
     private void updateEntityFromDTO(${entityName} entity, ${entityName}DTO dto) {
-        // TODO: Actualizar todos los campos específicos de la entidad
-        // Ejemplo: entity.setName(dto.getName());
+        // Actualizar todos los campos específicos de la entidad
+        ${generateFieldMappings(clase, 'updateEntity')}
     }
 
     // Actualización parcial de Entity desde DTO
     private void partialUpdateEntityFromDTO(${entityName} entity, ${entityName}DTO dto) {
-        // TODO: Actualizar solo los campos no nulos del DTO
+        // Actualizar solo los campos no nulos del DTO
         if (dto.getId() != null) {
             entity.setId(dto.getId());
         }
-        // Ejemplo: if (dto.getName() != null) { entity.setName(dto.getName()); }
-        // Agregar más campos según sea necesario
+        
+        // Actualizar campos específicos solo si no son nulos
+        ${generateFieldMappings(clase, 'partialUpdateEntity')}
     }
 }`;
 
@@ -969,7 +1023,7 @@ wrapperUrl=https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-w
   const wrapperJarPath = path.join(wrapperDir, 'maven-wrapper.jar');
   
   try {
-    console.log('📥 Descargando Maven Wrapper JAR...');
+    console.log('Descargando Maven Wrapper JAR...');
     const response = await fetch(wrapperJarUrl);
     
     if (!response.ok) {
@@ -992,45 +1046,45 @@ wrapperUrl=https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-w
       throw new Error('Error de integridad: tamaño del archivo no coincide');
     }
     
-    console.log(`✅ Maven Wrapper descargado correctamente (${stats.size} bytes)`);
+    console.log(`Maven Wrapper descargado correctamente (${stats.size} bytes)`);
     
   } catch (error) {
-    console.error('❌ Error descargando Maven Wrapper:', error.message);
-    console.log('💡 Creando instrucciones de reparación automática...');
+    console.error('Error descargando Maven Wrapper:', error.message);
+    console.log('Creando instrucciones de reparación automática...');
     
     // Crear archivo de instrucciones para reparación automática
-    const repairInstructions = `# 🔧 Reparación Automática de Maven Wrapper
+    const repairInstructions = `# Reparación Automática de Maven Wrapper
 
 Si encuentras el error "Could not find or load main class org.apache.maven.wrapper.MavenWrapperMain", 
 ejecuta el script de reparación correspondiente a tu sistema operativo:
 
-## 🪟 Windows PowerShell:
+## Windows PowerShell:
 \`\`\`powershell
 if (!(Test-Path ".mvn\\wrapper\\maven-wrapper.jar") -or (Get-Item ".mvn\\wrapper\\maven-wrapper.jar").Length -lt 50000) {
-    Write-Host "🔧 Reparando Maven Wrapper..." -ForegroundColor Yellow
+    Write-Host "Reparando Maven Wrapper..." -ForegroundColor Yellow
     Remove-Item ".mvn\\wrapper\\maven-wrapper.jar" -Force -ErrorAction SilentlyContinue
     Invoke-WebRequest -Uri "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar" -OutFile ".mvn\\wrapper\\maven-wrapper.jar"
-    Write-Host "✅ Maven Wrapper reparado exitosamente" -ForegroundColor Green
+    Write-Host "Maven Wrapper reparado exitosamente" -ForegroundColor Green
 }
 \`\`\`
 
-## 🐧 Linux/Mac:
+## Linux/Mac:
 \`\`\`bash
 if [ ! -f ".mvn/wrapper/maven-wrapper.jar" ] || [ $(stat -c%s ".mvn/wrapper/maven-wrapper.jar") -lt 50000 ]; then
-    echo "🔧 Reparando Maven Wrapper..."
+    echo "Reparando Maven Wrapper..."
     rm -f ".mvn/wrapper/maven-wrapper.jar"
     curl -L "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar" -o ".mvn/wrapper/maven-wrapper.jar"
-    echo "✅ Maven Wrapper reparado exitosamente"
+    echo "Maven Wrapper reparado exitosamente"
 fi
 \`\`\`
 
-## ✅ Verificar integridad:
+## Verificar integridad:
 \`\`\`bash
 # El archivo debe ser de al menos 50KB
 ls -la .mvn/wrapper/maven-wrapper.jar
 \`\`\`
 
-## 🚀 Después de la reparación:
+## Después de la reparación:
 \`\`\`bash
 # Compilar el proyecto
 ./mvnw clean compile
@@ -1693,7 +1747,7 @@ server.port=0`;
 
   await fs.writeFile(path.join(testResourcesDir, 'application-test.properties'), testProperties);
   
-  console.log('✅ Tests automáticos generados para validar la integridad del proyecto');
+  console.log('Tests automáticos generados para validar la integridad del proyecto');
 }
 
 // Crear colección de Postman para pruebas
@@ -1853,26 +1907,27 @@ async function createPostmanCollection(projectDir, titulo, entities) {
     JSON.stringify(postmanCollection, null, 2)
   );
   
-  console.log('✅ Colección de Postman generada: postman-collection.json');
+  console.log('Colección de Postman generada: postman-collection.json');
 }
 
 // Crear README
 async function createReadme(projectDir, titulo, entities) {
   const readmeContent = `# ${titulo} - Spring Boot API
 
-## 🚀 Cómo ejecutar
+## Instalación y Ejecución
 
 ### Prerrequisitos
 - Java 17 o superior
-- **NO necesitas instalar Maven** - el proyecto incluye Maven Wrapper
+- El proyecto incluye Maven Wrapper (no necesitas instalar Maven)
 
-### Pasos
+### Pasos para ejecutar
+
 1. Navegar al directorio del proyecto:
    \`\`\`bash
    cd ${path.basename(projectDir)}
    \`\`\`
 
-2. **Usar Maven Wrapper (recomendado):**
+2. Compilar y ejecutar:
    \`\`\`bash
    # En Windows:
    .\\mvnw.cmd clean compile
@@ -1883,301 +1938,109 @@ async function createReadme(projectDir, titulo, entities) {
    ./mvnw spring-boot:run
    \`\`\`
 
-3. **O usar Maven instalado (si lo tienes):**
-   \`\`\`bash
-   mvn clean compile
-   mvn spring-boot:run
-   \`\`\`
+3. La API estará disponible en: http://localhost:8080
 
-4. La API estará disponible en: http://localhost:8080
-
-### 🧪 Ejecutar Tests Automáticos
+### Ejecutar Tests
 \`\`\`bash
-# Ejecutar tests para verificar la integridad del proyecto
 ./mvnw test
-
-# Los tests verifican:
-# - ✅ No hay campos duplicados en entidades
-# - ✅ No hay columnas JPA duplicadas
-# - ✅ Las entidades se pueden instanciar correctamente
-# - ✅ Los repositorios funcionan correctamente
-# - ✅ La aplicación inicia sin errores
 \`\`\`
 
-### 🔧 Solución de Problemas Comunes
+## Endpoints Disponibles
 
-#### Problema: Maven Wrapper Corrupto
-Si encuentras el error "Could not find or load main class org.apache.maven.wrapper.MavenWrapperMain":
-\`\`\`bash
-# Windows PowerShell:
-if (!(Test-Path ".mvn\\\\wrapper\\\\maven-wrapper.jar") -or (Get-Item ".mvn\\\\wrapper\\\\maven-wrapper.jar").Length -lt 50000) {
-    Write-Host "Reparando Maven Wrapper..."
-    Remove-Item ".mvn\\\\wrapper\\\\maven-wrapper.jar" -Force -ErrorAction SilentlyContinue
-    Invoke-WebRequest -Uri "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar" -OutFile ".mvn\\\\wrapper\\\\maven-wrapper.jar"
+### Base URL: http://localhost:8080/api
+
+${entities.map(entity => `
+### ${entity}
+
+- GET /api/${entity.toLowerCase()} - Obtener todos los registros
+- GET /api/${entity.toLowerCase()}/{id} - Obtener registro por ID
+- POST /api/${entity.toLowerCase()} - Crear nuevo registro
+- PUT /api/${entity.toLowerCase()}/{id} - Actualizar registro completo
+- PATCH /api/${entity.toLowerCase()}/{id} - Actualizar registro parcial
+- DELETE /api/${entity.toLowerCase()}/{id} - Eliminar registro
+- GET /api/${entity.toLowerCase()}/count - Contar registros`).join('')}
+
+## Pruebas con Postman
+
+### Configuración básica
+1. Abre Postman
+2. Crea una nueva colección
+3. Configura la variable de entorno \`baseUrl\` con el valor: \`http://localhost:8080/api\`
+
+### Ejemplos de Pruebas
+
+${entities.map(entity => `
+#### ${entity}
+
+**Obtener todos los ${entity.toLowerCase()}**
+- Método: GET
+- URL: \`{{baseUrl}}/${entity.toLowerCase()}\`
+
+**Crear nuevo ${entity.toLowerCase()}**
+- Método: POST
+- URL: \`{{baseUrl}}/${entity.toLowerCase()}\`
+- Headers: \`Content-Type: application/json\`
+- Body (raw JSON):
+\`\`\`json
+{
+  "nombre": "aldair",
+  "apellido": "prueba"
 }
-
-# Linux/Mac:
-if [ ! -f ".mvn/wrapper/maven-wrapper.jar" ] || [ $(stat -c%s ".mvn/wrapper/maven-wrapper.jar") -lt 50000 ]; then
-    echo "Reparando Maven Wrapper..."
-    rm -f ".mvn/wrapper/maven-wrapper.jar"
-    curl -L "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar" -o ".mvn/wrapper/maven-wrapper.jar"
-fi
 \`\`\`
 
-#### Problema: Puerto 8080 Ocupado
-Si el puerto 8080 está ocupado, cambia el puerto en application.properties:
+**Obtener ${entity.toLowerCase()} por ID**
+- Método: GET
+- URL: \`{{baseUrl}}/${entity.toLowerCase()}/1\`
+
+**Actualizar ${entity.toLowerCase()} completamente**
+- Método: PUT
+- URL: \`{{baseUrl}}/${entity.toLowerCase()}/1\`
+- Headers: \`Content-Type: application/json\`
+- Body (raw JSON):
+\`\`\`json
+{
+  "id": 1,
+  "nombre": "${entity} Actualizado",
+  "apellido": "Apellido Actualizado"
+}
+\`\`\`
+
+**Actualizar ${entity.toLowerCase()} parcialmente**
+- Método: PATCH
+- URL: \`{{baseUrl}}/${entity.toLowerCase()}/1\`
+- Headers: \`Content-Type: application/json\`
+- Body (raw JSON):
+\`\`\`json
+{
+  "nombre": "${entity} Parcialmente Actualizado"
+}
+\`\`\`
+
+**Eliminar ${entity.toLowerCase()}**
+- Método: DELETE
+- URL: \`{{baseUrl}}/${entity.toLowerCase()}/1\`
+
+**Contar ${entity.toLowerCase()}**
+- Método: GET
+- URL: \`{{baseUrl}}/${entity.toLowerCase()}/count\``).join('')}
+
+## Base de Datos
+
+El proyecto usa H2 Database (en memoria) para desarrollo:
+- URL JDBC: jdbc:h2:mem:testdb
+- Usuario: sa
+- Contraseña: password
+- Consola H2: http://localhost:8080/h2-console
+
+## Configuración
+
+### Cambiar Puerto
+Si el puerto 8080 está ocupado, modifica \`application.properties\`:
 \`\`\`properties
 server.port=8081
 \`\`\`
 
-### 📚 Endpoints disponibles
-
-#### Base URL: http://localhost:8080/api
-
-${entities.map(entity => `
-**${entity}:**
-- GET /api/${entity.toLowerCase()} - Obtener todos
-- GET /api/${entity.toLowerCase()}/{id} - Obtener por ID
-- POST /api/${entity.toLowerCase()} - Crear nuevo
-- PUT /api/${entity.toLowerCase()}/{id} - Actualizar completamente
-- PATCH /api/${entity.toLowerCase()}/{id} - Actualizar parcialmente
-- DELETE /api/${entity.toLowerCase()}/{id} - Eliminar
-- GET /api/${entity.toLowerCase()}/count - Contar registros`).join('')}
-
-### 🧪 Pruebas con Postman
-
-#### 📥 Importar Colección de Postman
-**Opción 1: Archivo incluido (Recomendado)**
-1. Abre Postman
-2. Haz clic en "Import" (Importar)
-3. Selecciona el archivo \`postman-collection.json\` incluido en el proyecto
-4. ¡Listo! La colección se importará automáticamente
-
-**Opción 2: Copiar y pegar**
-1. Abre Postman
-2. Haz clic en "Import" (Importar)
-3. Selecciona "Raw text" y copia el siguiente JSON:
-
-\`\`\`json
-{
-  "info": {
-    "name": "${titulo} - Spring Boot API",
-    "description": "Colección de pruebas para la API generada automáticamente",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8080/api",
-      "type": "string"
-    }
-  ],
-  "item": [
-    ${entities.map(entity => `{
-      "name": "${entity}",
-      "item": [
-        {
-          "name": "Obtener todos los ${entity.toLowerCase()}",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
-              "host": ["{{baseUrl}}"],
-              "path": ["${entity.toLowerCase()}"]
-            }
-          }
-        },
-        {
-          "name": "Obtener ${entity.toLowerCase()} por ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["${entity.toLowerCase()}", "1"]
-            }
-          }
-        },
-        {
-          "name": "Crear nuevo ${entity.toLowerCase()}",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\\n  \\"name\\": \\"Ejemplo ${entity}\\"\\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
-              "host": ["{{baseUrl}}"],
-              "path": ["${entity.toLowerCase()}"]
-            }
-          }
-        },
-        {
-          "name": "Actualizar ${entity.toLowerCase()} completamente",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\\n  \\"id\\": 1,\\n  \\"name\\": \\"${entity} Actualizado\\"\\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["${entity.toLowerCase()}", "1"]
-            }
-          }
-        },
-        {
-          "name": "Actualizar ${entity.toLowerCase()} parcialmente",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\\n  \\"name\\": \\"${entity} Parcialmente Actualizado\\"\\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["${entity.toLowerCase()}", "1"]
-            }
-          }
-        },
-        {
-          "name": "Eliminar ${entity.toLowerCase()}",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["${entity.toLowerCase()}", "1"]
-            }
-          }
-        },
-        {
-          "name": "Contar ${entity.toLowerCase()}",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
-              "host": ["{{baseUrl}}"],
-              "path": ["${entity.toLowerCase()}", "count"]
-            }
-          }
-        }
-      ]
-    }`).join(',')}
-  ]
-}
-\`\`\`
-
-#### 🔧 Configuración de Variables
-1. En Postman, ve a la pestaña "Variables"
-2. Configura la variable \`baseUrl\` con: \`http://localhost:8080/api\`
-3. Si cambias el puerto, actualiza la variable \`baseUrl\`
-
-#### 📋 Ejemplos de Pruebas Paso a Paso
-
-##### 1. **Probar Endpoint GET (Obtener todos)**
-- **Método:** GET
-- **URL:** \`{{baseUrl}}/account\`
-- **Respuesta esperada:** Lista de cuentas (puede estar vacía inicialmente)
-
-##### 2. **Probar Endpoint POST (Crear nuevo)**
-- **Método:** POST
-- **URL:** \`{{baseUrl}}/account\`
-- **Headers:** \`Content-Type: application/json\`
-- **Body (raw JSON):**
-\`\`\`json
-{
-  "accountNumber": "12345",
-  "balance": 1000.0,
-  "accountType": "CHECKING"
-}
-\`\`\`
-- **Respuesta esperada:** \`201 Created\` con el objeto creado
-
-##### 3. **Probar Endpoint PUT (Actualizar completamente)**
-- **Método:** PUT
-- **URL:** \`{{baseUrl}}/account/1\`
-- **Headers:** \`Content-Type: application/json\`
-- **Body (raw JSON):**
-\`\`\`json
-{
-  "id": 1,
-  "accountNumber": "12345",
-  "balance": 2000.0,
-  "accountType": "SAVINGS"
-}
-\`\`\`
-- **Respuesta esperada:** \`200 OK\` con el objeto actualizado
-
-##### 4. **Probar Endpoint PATCH (Actualizar parcialmente)**
-- **Método:** PATCH
-- **URL:** \`{{baseUrl}}/account/1\`
-- **Headers:** \`Content-Type: application/json\`
-- **Body (raw JSON):**
-\`\`\`json
-{
-  "balance": 1500.0
-}
-\`\`\`
-- **Respuesta esperada:** \`200 OK\` con el objeto parcialmente actualizado
-
-##### 5. **Probar Endpoint DELETE (Eliminar)**
-- **Método:** DELETE
-- **URL:** \`{{baseUrl}}/account/1\`
-- **Respuesta esperada:** \`204 No Content\`
-
-#### 🎯 Flujo de Pruebas Recomendado
-1. **Crear** un nuevo registro con POST
-2. **Obtener** el registro creado con GET por ID
-3. **Actualizar** completamente con PUT
-4. **Actualizar** parcialmente con PATCH
-5. **Obtener todos** los registros con GET
-6. **Contar** registros con GET /count
-7. **Eliminar** el registro con DELETE
-8. **Verificar** que fue eliminado con GET por ID (debe devolver 404)
-
-#### ⚠️ Notas Importantes
-- **Asegúrate** de que la aplicación esté ejecutándose en \`http://localhost:8080\`
-- **Los IDs** pueden variar según los datos existentes
-- **Algunos endpoints** pueden devolver \`404 Not Found\` si no hay datos
-- **Los campos** en el JSON pueden variar según las entidades generadas
-
-### 🗄️ Base de datos
-
-Por defecto, el proyecto usa **H2 Database** (en memoria) para facilitar el desarrollo:
-- **URL JDBC:** jdbc:h2:mem:testdb
-- **Usuario:** sa
-- **Contraseña:** password
-- **Consola H2:** http://localhost:8080/h2-console
-
-### 🔧 Configuración
-
-#### Cambiar a PostgreSQL (Producción)
+### Cambiar a PostgreSQL (Producción)
 1. Agregar dependencia en \`pom.xml\`:
 \`\`\`xml
 <dependency>
@@ -2196,21 +2059,7 @@ spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.hibernate.ddl-auto=update
 \`\`\`
 
-### 🐳 Docker
-
-Para ejecutar con Docker:
-\`\`\`bash
-# Compilar el proyecto
-./mvnw clean package -DskipTests
-
-# Construir imagen Docker
-docker build -t ${titulo.toLowerCase().replace(/\s+/g, '-')}-api .
-
-# Ejecutar contenedor
-docker run -p 8080:8080 ${titulo.toLowerCase().replace(/\s+/g, '-')}-api
-\`\`\`
-
-### 📋 Estructura del proyecto
+## Estructura del Proyecto
 
 \`\`\`
 src/
@@ -2227,63 +2076,55 @@ src/
 └── test/
 \`\`\`
 
-### ⚡ Desarrollo
+## Solución de Problemas
 
-#### Hot Reload
-Para desarrollo con recarga automática:
-\`\`\`bash
-./mvnw spring-boot:run -Dspring-boot.run.jvmArguments="-Dspring.profiles.active=dev"
+### Maven Wrapper Corrupto
+Si encuentras el error "Could not find or load main class org.apache.maven.wrapper.MavenWrapperMain":
+
+**Windows PowerShell:**
+\`\`\`powershell
+if (!(Test-Path ".mvn\\wrapper\\maven-wrapper.jar") -or (Get-Item ".mvn\\wrapper\\maven-wrapper.jar").Length -lt 50000) {
+    Write-Host "Reparando Maven Wrapper..."
+    Remove-Item ".mvn\\wrapper\\maven-wrapper.jar" -Force -ErrorAction SilentlyContinue
+    Invoke-WebRequest -Uri "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar" -OutFile ".mvn\\wrapper\\maven-wrapper.jar"
+}
 \`\`\`
 
-#### Tests
+**Linux/Mac:**
 \`\`\`bash
-./mvnw test
+if [ ! -f ".mvn/wrapper/maven-wrapper.jar" ] || [ $(stat -c%s ".mvn/wrapper/maven-wrapper.jar") -lt 50000 ]; then
+    echo "Reparando Maven Wrapper..."
+    rm -f ".mvn/wrapper/maven-wrapper.jar"
+    curl -L "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar" -o ".mvn/wrapper/maven-wrapper.jar"
+fi
 \`\`\`
 
-### 🚨 Problemas comunes
+### Otros Problemas Comunes
+1. **Puerto 8080 ocupado:** Cambiar puerto en \`application.properties\`
+2. **Error de Java:** Verificar que Java 17+ esté instalado con \`java -version\`
+3. **Problemas de permisos:** En Linux/Mac ejecutar \`chmod +x mvnw\`
 
-1. **Puerto 8080 ocupado:**
-   - Cambiar puerto en \`application.properties\`: \`server.port=8081\`
-   
-2. **Error de Java:**
-   - Verificar que Java 17+ esté instalado: \`java -version\`
-   
-3. **Problemas de permisos:**
-   - En Linux/Mac: \`chmod +x mvnw\`
-
-### 📚 Documentación adicional
+## Documentación Adicional
 
 - [Spring Boot Documentation](https://spring.io/projects/spring-boot)
 - [Spring Data JPA](https://spring.io/projects/spring-data-jpa)
 - [H2 Database](https://www.h2database.com/)
 
 ---
-**Generado automáticamente con ❤️**
-${entities.map(entity => `- **${entity}**: http://localhost:8080/api/${entity.toLowerCase()}s`).join('\n')}
 
-### 🗄️ Base de datos
-- **H2 Console**: http://localhost:8080/h2-console
-- **JDBC URL**: jdbc:h2:mem:testdb
-- **Usuario**: sa
-- **Contraseña**: password
+**Proyecto generado automáticamente desde diagrama UML**
 
-### 📝 Entidades generadas
+### Entidades Generadas
 ${entities.map(entity => `- ${entity}`).join('\n')}
 
-### 🔧 Operaciones CRUD disponibles para cada entidad:
-- \`GET /api/{entidad}s\` - Obtener todos
-- \`GET /api/{entidad}s/{id}\` - Obtener por ID
-- \`POST /api/{entidad}s\` - Crear nuevo
-- \`PUT /api/{entidad}s/{id}\` - Actualizar
-- \`DELETE /api/{entidad}s/{id}\` - Eliminar
-
-### 💡 Ventajas del Maven Wrapper:
-- ✅ **No necesitas instalar Maven** en tu sistema
-- ✅ **Versión consistente** de Maven para todos los desarrolladores
-- ✅ **Funciona inmediatamente** después de descargar el proyecto
-- ✅ **Compatible** con Windows, Linux y Mac
-
-¡Proyecto Spring Boot generado automáticamente desde diagrama UML! 🎉`;
+### Operaciones CRUD Disponibles
+- GET /api/{entidad} - Obtener todos
+- GET /api/{entidad}/{id} - Obtener por ID
+- POST /api/{entidad} - Crear nuevo
+- PUT /api/{entidad}/{id} - Actualizar completo
+- PATCH /api/{entidad}/{id} - Actualizar parcial
+- DELETE /api/{entidad}/{id} - Eliminar
+- GET /api/{entidad}/count - Contar registros`;
 
   await fs.writeFile(path.join(projectDir, 'README.md'), readmeContent);
 }
