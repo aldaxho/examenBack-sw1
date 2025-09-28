@@ -221,7 +221,7 @@ app.use('/api/assistant', verificarToken, assistantRoutes);
 - PostgreSQL 12+
 - Java 17+ (para proyectos generados)
 
-### Instalación
+### Instalación Local
 
 1. **Clonar el repositorio**
 ```bash
@@ -255,7 +255,223 @@ npx sequelize-cli db:migrate
 ```bash
 npm start
 # o para desarrollo
-nodemon index.js
+npm run dev
+```
+
+## Despliegue en DigitalOcean
+
+### Configuración de Base de Datos PostgreSQL
+
+1. **Crear Droplet en DigitalOcean**
+   - Ubuntu 22.04 LTS
+   - Mínimo 1GB RAM, 1 CPU
+   - Habilitar IPv6 y monitoreo
+
+2. **Crear Base de Datos PostgreSQL**
+   - Ir a "Databases" en DigitalOcean
+   - Crear cluster PostgreSQL
+   - Configurar firewall para permitir conexiones desde tu droplet
+
+3. **Configurar credenciales de base de datos**
+   - Host: `db-postgresql-nyc3-xxxxx-do-user-xxxxx-0.m.db.ondigitalocean.com`
+   - Puerto: `25060`
+   - Usuario: `doadmin`
+   - Contraseña: `AVNS_xxxxxxxxxxxxx`
+   - Base de datos: `defaultdb`
+   - SSL: Requerido
+
+### Despliegue de la Aplicación
+
+1. **Conectar al Droplet**
+```bash
+ssh root@tu-droplet-ip
+```
+
+2. **Instalar Node.js**
+```bash
+# Actualizar sistema
+apt update && apt upgrade -y
+
+# Instalar Node.js 18
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+apt-get install -y nodejs
+
+# Verificar instalación
+node --version
+npm --version
+```
+
+3. **Clonar y configurar la aplicación**
+```bash
+# Clonar repositorio
+git clone <tu-repositorio>
+cd examenBack-sw1
+
+# Instalar dependencias
+npm install
+
+# Configurar variables de entorno
+nano .env
+```
+
+4. **Configurar archivo .env para producción**
+```env
+NODE_ENV=production
+PORT=3000
+JWT_SECRET=tu_jwt_secret_muy_seguro_aqui
+DB_HOST=db-postgresql-nyc3-xxxxx-do-user-xxxxx-0.m.db.ondigitalocean.com
+DB_PORT=25060
+DB_NAME=defaultdb
+DB_USER=doadmin
+DB_PASSWORD=AVNS_xxxxxxxxxxxxx
+DB_SSL=true
+```
+
+5. **Ejecutar migraciones de base de datos**
+```bash
+# Ejecutar migraciones en producción
+npx sequelize-cli db:migrate --env production
+
+# Verificar estado de migraciones
+npx sequelize-cli db:migrate:status --env production
+```
+
+6. **Configurar PM2 para gestión de procesos**
+```bash
+# Instalar PM2 globalmente
+npm install -g pm2
+
+# Crear archivo de configuración PM2
+nano ecosystem.config.js
+```
+
+**ecosystem.config.js:**
+```javascript
+module.exports = {
+  apps: [{
+    name: 'examenBack-sw1',
+    script: 'index.js',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000
+    }
+  }]
+};
+```
+
+7. **Iniciar aplicación con PM2**
+```bash
+# Iniciar aplicación
+pm2 start ecosystem.config.js
+
+# Configurar PM2 para iniciar automáticamente
+pm2 startup
+pm2 save
+
+# Verificar estado
+pm2 status
+pm2 logs
+```
+
+8. **Configurar Nginx como proxy reverso**
+```bash
+# Instalar Nginx
+apt install nginx -y
+
+# Configurar sitio
+nano /etc/nginx/sites-available/examenBack-sw1
+```
+
+**Configuración Nginx:**
+```nginx
+server {
+    listen 80;
+    server_name tu-dominio.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+```bash
+# Habilitar sitio
+ln -s /etc/nginx/sites-available/examenBack-sw1 /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+```
+
+9. **Configurar SSL con Let's Encrypt**
+```bash
+# Instalar Certbot
+apt install certbot python3-certbot-nginx -y
+
+# Obtener certificado SSL
+certbot --nginx -d tu-dominio.com
+
+# Verificar renovación automática
+certbot renew --dry-run
+```
+
+### Comandos de Gestión
+
+```bash
+# Ver logs de la aplicación
+pm2 logs examenBack-sw1
+
+# Reiniciar aplicación
+pm2 restart examenBack-sw1
+
+# Detener aplicación
+pm2 stop examenBack-sw1
+
+# Ver estado de la aplicación
+pm2 status
+
+# Monitorear recursos
+pm2 monit
+```
+
+### Scripts de Despliegue
+
+**deploy.sh:**
+```bash
+#!/bin/bash
+echo "Iniciando despliegue..."
+
+# Actualizar código
+git pull origin main
+
+# Instalar dependencias
+npm install
+
+# Ejecutar migraciones
+npx sequelize-cli db:migrate --env production
+
+# Reiniciar aplicación
+pm2 restart examenBack-sw1
+
+echo "Despliegue completado"
+```
+
+```bash
+# Hacer ejecutable
+chmod +x deploy.sh
+
+# Ejecutar despliegue
+./deploy.sh
 ```
 
 ## Casos de Uso

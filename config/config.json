@@ -15,10 +15,17 @@
     "dialect": "mysql"
   },
   "production": {
-    "username": "root",
-    "password": null,
-    "database": "database_production",
-    "host": "127.0.0.1",
-    "dialect": "mysql"
+    "username": "doadmin",
+    "password": "AVNS_KaENTyk7NioFK8Xu9eQ",
+    "database": "defaultdb",
+    "host": "db-postgresql-nyc3-88273-do-user-24994056-0.m.db.ondigitalocean.com",
+    "port": 25060,
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
   }
 }
