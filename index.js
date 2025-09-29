@@ -35,11 +35,21 @@ function getOnlineUsersInRoom(roomId) {
 }
 
 // Configuración de CORS para Express
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://18.223.131.235:3000'], // Permite solicitudes solo desde tu frontend
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true // Permite el envío de credenciales (cookies, headers de autenticación)
-}));
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://18.223.131.235:3000',
+    'https://diagramador1.netlify.app',
+    'https://157-245-1-74.sslip.io'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+app.use(cors(corsOptions));
+// Habilitar preflight para todos los endpoints
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Servir archivos estáticos desde la carpeta public
@@ -48,8 +58,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Configuración de Socket.IO con CORS
 const io = socketIo(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST","PUT","DELETE"]
+    origin: [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://18.223.131.235:3000',
+      'https://diagramador1.netlify.app',
+      'https://157-245-1-74.sslip.io'
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
   }
 });
 
@@ -132,7 +150,7 @@ io.on('connection', (socket) => {
         if (callback) callback({ error: 'roomId requerido' });
         return;
       }
-      // Reutilizar la lógica de unión
+      
       // Agregar usuario a la sala
       socket.join(roomId);
       socket.roomId = roomId;
