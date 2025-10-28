@@ -80,6 +80,9 @@ async function generateSimpleSpringBootProject(diagramaJSON, titulo) {
   await createPomXml(projectDir, entities);
   await createApplicationProperties(resourcesDir);
   await createMavenWrapper(projectDir);
+  await createUniversalStartScripts(projectDir);
+  // Si el servidor de generación tiene Maven, se puede generar el JAR automáticamente:
+  // await generateJarExecutable(projectDir);
   await createReadme(projectDir, cleanTitulo, entities);
   await createDockerfile(projectDir);
   await createGitignore(projectDir);
@@ -1023,19 +1026,59 @@ wrapperUrl=https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-w
   const wrapperJarPath = path.join(wrapperDir, 'maven-wrapper.jar');
   
   try {
-    console.log('Descargando Maven Wrapper JAR...');
-    const response = await fetch(wrapperJarUrl);
+    console.log('📥 Descargando Maven Wrapper JAR...');
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    let buffer;
+    
+    // Intentar primero con fetch (Node 18+)
+    if (typeof fetch === 'function') {
+      try {
+        const response = await fetch(wrapperJarUrl, { 
+          timeout: 30000,
+          redirect: 'follow'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        buffer = Buffer.from(arrayBuffer);
+      } catch (fetchError) {
+        console.warn('⚠️ Fetch falló, intentando con HTTPS nativo...');
+        buffer = null; // Forzar fallback a HTTPS
+      }
     }
     
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Fallback: usar módulo https nativo (más confiable)
+    if (!buffer) {
+      const https = require('https');
+      buffer = await new Promise((resolve, reject) => {
+        https.get(wrapperJarUrl, (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            // Seguir redirección
+            https.get(res.headers.location, (redirectRes) => {
+              const chunks = [];
+              redirectRes.on('data', (chunk) => chunks.push(chunk));
+              redirectRes.on('end', () => resolve(Buffer.concat(chunks)));
+              redirectRes.on('error', reject);
+            }).on('error', reject).setTimeout(30000);
+          } else if (res.statusCode >= 400) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+          } else {
+            const chunks = [];
+            res.on('data', (chunk) => chunks.push(chunk));
+            res.on('end', () => resolve(Buffer.concat(chunks)));
+            res.on('error', reject);
+          }
+        }).on('error', reject).setTimeout(30000);
+      });
+    }
     
-    // Validar tamaño mínimo del archivo (debe ser al menos 50KB)
-    if (buffer.length < 50000) {
-      throw new Error(`Archivo Maven Wrapper demasiado pequeño: ${buffer.length} bytes`);
+    // Validar tamaño mínimo del archivo (wrapper JAR es ~60KB)
+    const MIN_SIZE = 50000; // 50 KB
+    if (buffer.length < MIN_SIZE) {
+      throw new Error(`JAR demasiado pequeño: ${buffer.length} bytes (esperaba >= ${MIN_SIZE})`);
     }
     
     await fs.writeFile(wrapperJarPath, buffer);
@@ -1043,62 +1086,70 @@ wrapperUrl=https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-w
     // Verificar que el archivo se escribió correctamente
     const stats = await fs.stat(wrapperJarPath);
     if (stats.size !== buffer.length) {
-      throw new Error('Error de integridad: tamaño del archivo no coincide');
+      throw new Error(`Error de integridad: ${stats.size} != ${buffer.length}`);
     }
     
-    console.log(`Maven Wrapper descargado correctamente (${stats.size} bytes)`);
+    console.log(`✅ Maven Wrapper descargado: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`   El usuario NO necesitará Maven instalado ✓`);
     
   } catch (error) {
-    console.error('Error descargando Maven Wrapper:', error.message);
-    console.log('Creando instrucciones de reparación automática...');
+    console.error('❌ Error descargando Maven Wrapper:', error.message);
+    console.log('   Creando instrucciones de reparación automática...');
     
     // Crear archivo de instrucciones para reparación automática
-    const repairInstructions = `# Reparación Automática de Maven Wrapper
+    const repairInstructions = `# Maven Wrapper JAR - Reparación Automática
 
-Si encuentras el error "Could not find or load main class org.apache.maven.wrapper.MavenWrapperMain", 
-ejecuta el script de reparación correspondiente a tu sistema operativo:
+## El JAR de Maven Wrapper no se incluyó. Ejecuta esto:
 
-## Windows PowerShell:
+### Windows PowerShell:
 \`\`\`powershell
-if (!(Test-Path ".mvn\\wrapper\\maven-wrapper.jar") -or (Get-Item ".mvn\\wrapper\\maven-wrapper.jar").Length -lt 50000) {
-    Write-Host "Reparando Maven Wrapper..." -ForegroundColor Yellow
-    Remove-Item ".mvn\\wrapper\\maven-wrapper.jar" -Force -ErrorAction SilentlyContinue
-    Invoke-WebRequest -Uri "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar" -OutFile ".mvn\\wrapper\\maven-wrapper.jar"
-    Write-Host "Maven Wrapper reparado exitosamente" -ForegroundColor Green
+$jarPath = ".mvn\\wrapper\\maven-wrapper.jar"
+$url = "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar"
+
+Write-Host "Descargando Maven Wrapper..." -ForegroundColor Cyan
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+New-Item -ItemType Directory -Path ".mvn\\wrapper" -Force | Out-Null
+Invoke-WebRequest -Uri $url -OutFile $jarPath -UseBasicParsing
+
+if ((Get-Item $jarPath).Length -gt 50000) {
+    Write-Host "✅ Completado. Ahora ejecuta: mvnw.cmd spring-boot:run" -ForegroundColor Green
+} else {
+    Write-Host "❌ Error: Archivo demasiado pequeño" -ForegroundColor Red
 }
 \`\`\`
 
-## Linux/Mac:
+### Linux/Mac:
 \`\`\`bash
-if [ ! -f ".mvn/wrapper/maven-wrapper.jar" ] || [ $(stat -c%s ".mvn/wrapper/maven-wrapper.jar") -lt 50000 ]; then
-    echo "Reparando Maven Wrapper..."
-    rm -f ".mvn/wrapper/maven-wrapper.jar"
-    curl -L "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar" -o ".mvn/wrapper/maven-wrapper.jar"
-    echo "Maven Wrapper reparado exitosamente"
+#!/bin/bash
+jarPath=".mvn/wrapper/maven-wrapper.jar"
+url="https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar"
+
+echo "Descargando Maven Wrapper..."
+mkdir -p ".mvn/wrapper"
+curl -L "$url" -o "$jarPath"
+
+if [ -f "$jarPath" ] && [ $(stat -f%z "$jarPath" 2>/dev/null || stat -c%s "$jarPath") -gt 50000 ]; then
+    echo "✅ Completado. Ahora ejecuta: ./mvnw spring-boot:run"
+else
+    echo "❌ Error: Archivo demasiado pequeño"
 fi
 \`\`\`
 
-## Verificar integridad:
-\`\`\`bash
-# El archivo debe ser de al menos 50KB
-ls -la .mvn/wrapper/maven-wrapper.jar
-\`\`\`
+## Después de reparar:
 
-## Después de la reparación:
 \`\`\`bash
-# Compilar el proyecto
-./mvnw clean compile
+# Windows
+mvnw.cmd spring-boot:run
 
-# Ejecutar la aplicación
+# Linux/Mac
 ./mvnw spring-boot:run
 \`\`\`
 `;
     
-    await fs.writeFile(path.join(projectDir, 'MAVEN_WRAPPER_REPAIR.md'), repairInstructions);
+    await fs.writeFile(path.join(projectDir, 'FIX_MAVEN_WRAPPER.md'), repairInstructions);
     
-    // Crear placeholder para que el proyecto se pueda generar
-    const placeholderJar = Buffer.from('PK'); // Placeholder mínimo
-    await fs.writeFile(wrapperJarPath, placeholderJar);
+    // NO crear placeholder corrupto - mejor dejar vacío
+    console.warn('⚠️ Wrapper JAR no descargado. Usuario debe ejecutar FIX_MAVEN_WRAPPER.md');
   }
   
   // Maven Wrapper Script para Windows
@@ -2127,6 +2178,70 @@ ${entities.map(entity => `- ${entity}`).join('\n')}
 - GET /api/{entidad}/count - Contar registros`;
 
   await fs.writeFile(path.join(projectDir, 'README.md'), readmeContent);
+}
+
+// ==========================================
+// Opcionales: compilar JAR y crear scripts de inicio
+// ==========================================
+async function generateJarExecutable(projectDir) {
+  const { exec } = require('child_process');
+  const util = require('util');
+  const execPromise = util.promisify(exec);
+
+  try {
+    const command = process.platform === 'win32' ? 'mvnw.cmd clean package -DskipTests -q' : './mvnw clean package -DskipTests -q';
+    await execPromise(command, { cwd: projectDir, timeout: 300000, maxBuffer: 1024 * 1024 * 10 });
+    const targetDir = path.join(projectDir, 'target');
+    const files = await fs.readdir(targetDir).catch(() => []);
+    const jars = files.filter(f => f.endsWith('.jar') && !f.endsWith('-sources.jar') && !f.includes('original'));
+    if (!jars || jars.length === 0) return null;
+    const jarPath = path.join(targetDir, jars[0]);
+    return jarPath;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function createUniversalStartScripts(projectDir) {
+  // start.bat: busca el JAR y compila si no existe
+  const startBat = [
+    '@echo off',
+    'REM Script para ejecutar el backend Spring Boot generado',
+    'where java >nul 2>nul',
+    'if %ERRORLEVEL% NEQ 0 (',
+    '  echo Error: Java no esta instalado',
+    '  echo Descarga Java desde https://www.java.com',
+    '  pause',
+    '  exit /b 1',
+    ')',
+    'set JAR_PATH=',
+    'for %%f in ("%~dp0target\\*.jar") do set JAR_PATH=%%~ff',
+    'if "%JAR_PATH%"=="" (',
+    '  echo JAR no encontrado. Intentando compilar con mvnw.cmd...',
+    '  call "%~dp0mvnw.cmd" clean package -DskipTests -q',
+    '  for %%f in ("%~dp0target\\*.jar") do set JAR_PATH=%%~ff',
+    '  if "%JAR_PATH%"=="" (',
+    '    echo Error: No se pudo compilar el proyecto. Ejecuta: mvnw.cmd clean package',
+    '    pause',
+    '    exit /b 1',
+    '  )',
+    ')',
+    'echo Iniciando aplicacion...',
+    'echo JAR: %JAR_PATH%',
+    'java -jar "%JAR_PATH%"',
+    'pause'
+  ].join('\r\n');
+
+  // start.sh: busca el JAR y compila si no existe
+  const startSh = ['#!/bin/bash', '', 'SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"', '', 'if ! command -v java &> /dev/null; then', '  echo "Error: Java no esta instalado"', '  echo "Descarga Java desde https://www.java.com"', '  exit 1', 'fi', '', 'JAR_PATH=$(ls "$SCRIPT_DIR/target"/*.jar 2>/dev/null | head -n 1)', 'if [ -z "$JAR_PATH" ]; then', '  echo "JAR no encontrado. Intentando compilar con ./mvnw..."', '  "$SCRIPT_DIR/mvnw" clean package -DskipTests -q || true', '  JAR_PATH=$(ls "$SCRIPT_DIR/target"/*.jar 2>/dev/null | head -n 1)', '  if [ -z "$JAR_PATH" ]; then', '    echo "Error: No se pudo compilar el proyecto. Ejecuta: ./mvnw clean package"', '    exit 1', '  fi', 'fi', '', 'echo "Iniciando aplicacion..."', 'echo "JAR: $JAR_PATH"', 'java -jar "$JAR_PATH"'].join('\n');
+
+  try {
+    await fs.writeFile(path.join(projectDir, 'start.bat'), startBat);
+    await fs.writeFile(path.join(projectDir, 'start.sh'), startSh);
+    try { const { exec } = require('child_process'); exec(`chmod +x "${path.join(projectDir, 'start.sh')}"`, () => {}); } catch (e) {}
+  } catch (e) {
+    // no crítico
+  }
 }
 
 module.exports = {

@@ -1,0 +1,803 @@
+{
+  "info": {
+    "name": "pruebajorge - Spring Boot API",
+    "description": "Colección de pruebas para la API generada automáticamente desde diagrama UML",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string",
+      "description": "URL base de la API"
+    }
+  ],
+  "item": [
+    {
+      "name": "Cliente",
+      "description": "Endpoints para la entidad Cliente",
+      "item": [
+        {
+          "name": "Obtener todos los cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Cliente\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar cliente completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Cliente Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar cliente parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cliente Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cliente",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categoria",
+      "description": "Endpoints para la entidad Categoria",
+      "item": [
+        {
+          "name": "Obtener todos los categoria",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categoria"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener categoria por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categoria",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo categoria",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Categoria\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categoria"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar categoria completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Categoria Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categoria",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar categoria parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Categoria Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categoria",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar categoria",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categoria",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar categoria",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categoria",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Producto",
+      "description": "Endpoints para la entidad Producto",
+      "item": [
+        {
+          "name": "Obtener todos los producto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "producto"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener producto por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "producto",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo producto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Producto\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "producto"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar producto completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Producto Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "producto",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar producto parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Producto Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "producto",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar producto",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "producto",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar producto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "producto",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pedido",
+      "description": "Endpoints para la entidad Pedido",
+      "item": [
+        {
+          "name": "Obtener todos los pedido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pedido"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener pedido por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pedido",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo pedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo Pedido\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pedido"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar pedido completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"Pedido Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pedido",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar pedido parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pedido Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pedido",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar pedido",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pedido",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar pedido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pedido",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DetallePedido",
+      "description": "Endpoints para la entidad DetallePedido",
+      "item": [
+        {
+          "name": "Obtener todos los detallepedido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "detallepedido"
+              ]
+            },
+            "description": "Obtiene todos los registros de ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Obtener detallepedido por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "detallepedido",
+                "1"
+              ]
+            },
+            "description": "Obtiene un ${entity.toLowerCase()} específico por su ID"
+          }
+        },
+        {
+          "name": "Crear nuevo detallepedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ejemplo DetallePedido\",\n  \"description\": \"Descripción de ejemplo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "detallepedido"
+              ]
+            },
+            "description": "Crea un nuevo ${entity.toLowerCase()}"
+          }
+        },
+        {
+          "name": "Actualizar detallepedido completamente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"name\": \"DetallePedido Actualizado\",\n  \"description\": \"Descripción actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "detallepedido",
+                "1"
+              ]
+            },
+            "description": "Actualiza completamente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Actualizar detallepedido parcialmente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"DetallePedido Parcialmente Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "detallepedido",
+                "1"
+              ]
+            },
+            "description": "Actualiza parcialmente un ${entity.toLowerCase()} existente"
+          }
+        },
+        {
+          "name": "Eliminar detallepedido",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "detallepedido",
+                "1"
+              ]
+            },
+            "description": "Elimina un ${entity.toLowerCase()} por su ID"
+          }
+        },
+        {
+          "name": "Contar detallepedido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/${entity.toLowerCase()}/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "detallepedido",
+                "count"
+              ]
+            },
+            "description": "Obtiene el número total de ${entity.toLowerCase()}"
+          }
+        }
+      ]
+    }
+  ]
+}

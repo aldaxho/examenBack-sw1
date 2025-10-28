@@ -1,6 +1,7 @@
 // routes/openapiRoutes.js
 const express = require('express');
 const { generateSpringBootWithOpenAPI } = require('../controllers/openapiController');
+const { generateFlutterWithBackend, generateFullStackProject } = require('../controllers/flutterController');
 const { verificarToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -58,5 +59,11 @@ router.use(verificarToken);
 
 // Ruta para generar Spring Boot con OpenAPI Generator (CONFIABLE)
 router.post('/generate-backend/:id', generateSpringBootWithOpenAPI);
+
+// Rutas para generar Flutter
+router.post('/generate-flutter/:id', generateFlutterWithBackend);
+
+// Ruta para generar proyecto completo (Backend + Frontend)
+router.post('/generate-fullstack/:id', generateFullStackProject);
 
 module.exports = router;

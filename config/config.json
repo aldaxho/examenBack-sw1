@@ -1,7 +1,7 @@
 {
   "development": {
-    "username": "postgres",
-    "password": "1234",
+    "username": "admin",
+    "password": "admin123",
     "database": "diagramador",
     "host": "127.0.0.1",
     "dialect": "postgres"
