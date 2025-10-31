@@ -1,11 +1,41 @@
-# Sistema de Generación Automática Full-Stack desde Diagramas UML
+# 🚀 Sistema de Generación Automática Full-Stack desde Diagramas UML
 
-## Descripción del Proyecto
+## � Tabla de Contenidos
 
-Este proyecto es una **API REST completa** desarrollada en **Node.js** que permite generar automáticamente proyectos **Spring Boot** (backend) y **Flutter** (frontend móvil) funcionales a partir de diagramas UML. El sistema incluye funcionalidades avanzadas como colaboración en tiempo real, autenticación JWT, generación de código completo, gestión de usuarios y conexión automática entre backend y frontend.
+1. [Descripción del Proyecto](#-descripción-del-proyecto)
+2. [Características Principales](#-características-principales)
+3. [Arquitectura del Sistema](#-arquitectura-del-sistema)
+4. [Estructura de Directorios](#-estructura-de-directorios)
+5. [API Endpoints](#-api-endpoints)
+   - [Autenticación](#-autenticación-apiauth)
+   - [Diagramas](#-diagramas-apidiagramas)
+   - [Generación de Proyectos](#-generación-de-proyectos-apiopenapi)
+   - [Asistente IA](#-asistente-ia-apiassistant)
+   - [Invitaciones](#-invitaciones-y-colaboración-apiinvitations)
+   - [Socket.IO](#-socketio---eventos-en-tiempo-real)
+6. [Funcionalidades Detalladas](#funcionalidades-detalladas)
+   - [Sistema de Limpieza Automática](#-sistema-de-limpieza-automática)
+   - [Generador Spring Boot](#-generador-de-spring-boot)
+   - [Generador Flutter](#generador-de-flutter)
+   - [Asistente IA](#-asistente-ia-integrado)
+   - [Sistema de Autenticación](#sistema-de-autenticación)
+7. [Instalación y Configuración](#instalación-y-configuración)
+8. [Scripts NPM](#scripts-npm-disponibles)
+9. [Despliegue](#despliegue-en-digitalocean)
+10. [Ejemplos de Uso](#-ejemplos-de-uso-completo)
+11. [Troubleshooting](#problemas-comunes-en-desarrollo)
+12. [Contribución](#contribución)
+13. [Licencia](#licencia)
 
-## Características Principales
+---
 
+## �📋 Descripción del Proyecto
+
+Este proyecto es una **API REST completa** desarrollada en **Node.js** que permite generar automáticamente proyectos **Spring Boot** (backend) y **Flutter** (frontend móvil) funcionales a partir de diagramas UML. El sistema incluye funcionalidades avanzadas como colaboración en tiempo real, autenticación JWT, generación de código completo, gestión de usuarios, asistente IA integrado y conexión automática entre backend y frontend.
+
+## ✨ Características Principales
+
+### 🔧 Generación de Código
 - **Generación completa de proyectos Spring Boot** desde diagramas UML
 - **Generación completa de aplicaciones Flutter** para dispositivos móviles
 - **Conexión automática** entre backend Spring Boot y frontend Flutter
@@ -13,106 +43,342 @@ Este proyecto es una **API REST completa** desarrollada en **Node.js** que permi
 - **Arquitectura Flutter completa**: Modelos, Servicios API, Pantallas, Widgets y Navegación
 - **Mapeo automático de relaciones**: Asociaciones, Composición, Agregación y Generalización
 - **CRUD completo en Flutter**: Lista, Formulario, Detalle para cada entidad
-- **Colaboración en tiempo real** con Socket.IO
+
+### 🤝 Colaboración en Tiempo Real
+- **Socket.IO** para colaboración simultánea entre múltiples usuarios
+- **Sincronización en tiempo real** de cambios en diagramas
+- **Cursores colaborativos** para ver la posición del mouse de otros usuarios
+- **Lista de usuarios conectados** por diagrama
+- **Sistema de presencia** que muestra quién está en línea
+- **Notificaciones** cuando usuarios se unen o abandonan
+
+### 🔐 Seguridad y Autenticación
 - **Sistema de autenticación JWT** con middleware de seguridad
-- **Asistente IA integrado** para análisis y mejora de diagramas
-- **Gestión de usuarios y permisos** granulares
-- **Sistema de invitaciones** para colaboración
+- **Encriptación de contraseñas** con bcryptjs
+- **Gestión de usuarios y permisos** granulares (propietario, editor, visualizador)
+- **Sistema de invitaciones** con códigos únicos
+- **Control de acceso** a diagramas por usuario
+
+### 🤖 Asistente IA Integrado
+- **Análisis automático** de diagramas UML
+- **Chat contextual** para cada diagrama
+- **Sugerencias de mejora** de arquitectura
+- **Validación de relaciones** y estructura
+- **Generación asistida** de clases y atributos
+
+### 🧹 Utilidades y Mantenimiento
 - **Limpieza automática** de archivos temporales
 - **Tests automáticos** para validar generación
 - **Scripts de ejecución** para proyectos completos
+- **Compresión ZIP** de proyectos generados
+- **Sistema de descarga** de código generado
 
-## Arquitectura del Sistema
+## 🏗️ Arquitectura del Sistema
 
-### Tecnologías Backend
-- **Node.js** - Runtime de JavaScript
-- **Express.js** - Framework web RESTful
-- **Socket.IO** - Comunicación en tiempo real
-- **Sequelize** - ORM para PostgreSQL
-- **JWT** - Autenticación con tokens seguros
-- **bcryptjs** - Encriptación de contraseñas
-- **Archiver** - Compresión de archivos ZIP
+### 💻 Tecnologías Backend
+- **Node.js** v18+ - Runtime de JavaScript
+- **Express.js** v4.21.0 - Framework web RESTful
+- **Socket.IO** v4.7.5 - Comunicación en tiempo real
+- **Sequelize** v6.37.3 - ORM para PostgreSQL
+- **JWT** (jsonwebtoken v9.0.2) - Autenticación con tokens seguros
+- **bcryptjs** v2.4.3 - Encriptación de contraseñas
+- **Archiver** v7.0.1 - Compresión de archivos ZIP
+- **Axios** v1.7.7 - Cliente HTTP
+- **CORS** v2.8.5 - Configuración de orígenes cruzados
+- **dotenv** v16.4.5 - Gestión de variables de entorno
 
-### Base de Datos
+### 🗄️ Base de Datos
 - **PostgreSQL** - Base de datos principal para persistencia
-- **H2 Database** - Base de datos en memoria para proyectos generados
+- **Sequelize CLI** - Migraciones y seeds
+- **H2 Database** - Base de datos en memoria para proyectos generados Spring Boot
 
-### Generación de Código
-- **Spring Boot 3.1.5** - Framework Java generado
-- **JPA/Hibernate** - Persistencia de datos
+### 🎯 Generación de Código
+
+#### Backend Spring Boot
+- **Spring Boot** v3.1.5 - Framework Java generado
+- **Spring Data JPA** - Persistencia con Hibernate
 - **Maven** - Gestión de dependencias
 - **Jackson** - Serialización JSON
-- **Flutter 3.10+** - Framework móvil generado
-- **Dart 3.0+** - Lenguaje de programación Flutter
+- **Lombok** - Reducción de código boilerplate
+- **H2 Database** - Base de datos embebida
+- **Spring Web** - Controladores REST
+
+#### Frontend Flutter
+- **Flutter** v3.10+ - Framework móvil generado
+- **Dart** v3.0+ - Lenguaje de programación
 - **HTTP** - Comunicación con backend
 - **JSON Annotation** - Serialización de datos
 - **Provider** - Gestión de estado
+- **Build Runner** - Generación de código automática
 
-### Estructura de Directorios
+### 📁 Estructura de Directorios
 ```
-├── controllers/          # Controladores de la API
-│   ├── assistantController.js    # IA para análisis de diagramas
-│   ├── authController.js         # Autenticación y registro
-│   ├── diagramaController.js     # CRUD de diagramas
-│   ├── invitacionController.js   # Sistema de invitaciones
-│   ├── openapiController.js     # Generación de Spring Boot
-│   └── flutterController.js     # Generación de Flutter y Full-Stack
-├── middleware/           # Middleware personalizado
-│   └── authMiddleware.js         # Verificación JWT
-├── models/              # Modelos de base de datos
-│   ├── diagrama.js             # Modelo de diagramas
-│   ├── DiagramaUsuario.js       # Relación diagrama-usuario
-│   ├── usuario.js              # Modelo de usuarios
-│   └── index.js                # Configuración Sequelize
-├── routes/              # Definición de rutas
-│   ├── assistantRoutes.js       # Rutas de IA
-│   ├── authRoutes.js           # Rutas de autenticación
-│   ├── diagramaRoutes.js       # Rutas de diagramas
-│   ├── invitationsRoutes.js    # Rutas de invitaciones
-│   └── openapiRoutes.js        # Rutas de generación
-├── services/            # Lógica de negocio
-│   └── agentService.js          # Servicio de IA
-├── utils/               # Utilidades
-│   ├── simpleSpringBootGenerator.js  # Generador Spring Boot
-│   ├── flutterGenerator.js           # Generador Flutter
-│   ├── createHomeScreen.js           # Generador pantalla principal
-│   ├── canvasAutoFit.js              # Utilidades canvas
-│   └── tempCleaner.js                # Limpieza automática
-└── migrations/          # Migraciones de base de datos
+examenBack-sw1/
+├── 📄 index.js                         # Punto de entrada principal con Socket.IO
+├── 📄 package.json                     # Dependencias y scripts
+├── 📄 README.md                        # Documentación completa
+├── 📄 CLAUDE.md                        # Notas y desarrollo con IA
+├── 📄 test-generator.js                # Tests de generación de código
+│
+├── 📂 config/                          # Configuración
+│   └── config.json                     # Configuración de base de datos
+│
+├── 📂 controllers/                     # Controladores de la API
+│   ├── assistantController.js          # IA para análisis de diagramas
+│   ├── authController.js               # Autenticación y registro
+│   ├── diagramaController.js           # CRUD de diagramas
+│   ├── invitacionController.js         # Sistema de invitaciones
+│   ├── openapiController.js            # Generación de Spring Boot
+│   └── flutterController.js            # Generación de Flutter y Full-Stack
+│
+├── 📂 middleware/                      # Middleware personalizado
+│   └── authMiddleware.js               # Verificación JWT y permisos
+│
+├── 📂 models/                          # Modelos de base de datos (Sequelize)
+│   ├── index.js                        # Configuración Sequelize
+│   ├── usuario.js                      # Modelo de usuarios
+│   ├── diagrama.js                     # Modelo de diagramas
+│   └── DiagramaUsuario.js              # Relación N:N con permisos
+│
+├── 📂 migrations/                      # Migraciones de base de datos
+│   ├── 20240919174041-create-usuario.js
+│   ├── 20240919174048-create-diagrama.js
+│   └── 20240927172547-create-diagrama-usuarios.js
+│
+├── 📂 routes/                          # Definición de rutas
+│   ├── assistantRoutes.js              # Rutas de IA
+│   ├── authRoutes.js                   # Rutas de autenticación
+│   ├── diagramaRoutes.js               # Rutas de diagramas
+│   ├── invitationsRoutes.js            # Rutas de invitaciones
+│   └── openapiRoutes.js                # Rutas de generación
+│
+├── 📂 services/                        # Lógica de negocio
+│   └── agentService.js                 # Servicio de IA con Claude/OpenAI
+│
+├── 📂 utils/                           # Utilidades
+│   ├── simpleSpringBootGenerator.js    # Generador Spring Boot completo
+│   ├── flutterGenerator.js             # Generador Flutter completo
+│   ├── createHomeScreen.js             # Generador pantalla principal Flutter
+│   ├── canvasAutoFit.js                # Utilidades para canvas
+│   └── tempCleaner.js                  # Limpieza automática de temporales
+│
+├── 📂 temp/                            # Proyectos generados (auto-limpieza)
+│   ├── flutter-frontend-*/             # Apps Flutter generadas
+│   └── spring-backend-*/               # Backends Spring Boot generados
+│
+└── 📂 docs/                            # Documentación técnica
+    └── indications/                    # Análisis y recomendaciones
+        ├── ANALYSIS_SUMMARY.md
+        ├── BUILD_RECOMMENDATIONS.md
+        ├── IMPLEMENTACION_CODIGO.md
+        ├── MAVEN_BUILD_ANALYSIS.md
+        ├── PROBLEMA_MAVEN_Y_SOLUCIONES.md
+        ├── SOLUCION_EJECUTIVA.md
+        └── SPRING_BOOT_BACKEND_ANALYSIS.md
 ```
 
-## API Endpoints
+## 🔌 API Endpoints
 
-### Autenticación
-- `POST /api/auth/register` - Registro de usuarios
-- `POST /api/auth/login` - Inicio de sesión
-- `GET /api/auth/profile` - Obtener perfil (requiere token)
+### 🔐 Autenticación (`/api/auth`)
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| `POST` | `/api/auth/register` | Registro de nuevos usuarios | ❌ No |
+| `POST` | `/api/auth/login` | Inicio de sesión (retorna JWT) | ❌ No |
+| `GET` | `/api/auth/profile` | Obtener perfil del usuario | ✅ Sí |
 
-### Diagramas
-- `GET /api/diagramas` - Listar diagramas del usuario
-- `POST /api/diagramas` - Crear nuevo diagrama
-- `GET /api/diagramas/:id` - Obtener diagrama específico
-- `PUT /api/diagramas/:id` - Actualizar diagrama
-- `DELETE /api/diagramas/:id` - Eliminar diagrama
+**Ejemplo de registro:**
+```json
+POST /api/auth/register
+{
+  "nombre": "Juan Pérez",
+  "email": "juan@example.com",
+  "password": "password123"
+}
+```
 
-### Generación de Proyectos
-- `POST /api/openapi/generate-backend/:id` - Generar solo proyecto Spring Boot
-- `POST /api/openapi/generate-flutter/:id` - Generar solo proyecto Flutter
-- `POST /api/openapi/generate-fullstack/:id` - Generar proyecto completo (Backend + Frontend)
-- `GET /api/openapi/download/:filename` - Descargar proyecto generado
+### 📊 Diagramas (`/api/diagramas`)
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| `GET` | `/api/diagramas` | Listar diagramas del usuario | ✅ Sí |
+| `POST` | `/api/diagramas` | Crear nuevo diagrama | ✅ Sí |
+| `GET` | `/api/diagramas/:id` | Obtener diagrama específico | ✅ Sí |
+| `PUT` | `/api/diagramas/:id` | Actualizar diagrama | ✅ Sí |
+| `DELETE` | `/api/diagramas/:id` | Eliminar diagrama | ✅ Sí |
 
-### Asistente IA
-- `POST /api/assistant/analyze` - Analizar diagrama con IA
-- `POST /api/assistant/chat/:diagramId` - Chat contextual con diagrama
+**Ejemplo de creación:**
+```json
+POST /api/diagramas
+{
+  "titulo": "Sistema de Ventas",
+  "contenido": {
+    "classes": [...],
+    "relations": [...]
+  }
+}
+```
 
-### Invitaciones
-- `POST /api/invitations/send` - Enviar invitación
-- `POST /api/invitations/accept/:token` - Aceptar invitación
-- `GET /api/invitations/pending` - Invitaciones pendientes
+### 🏗️ Generación de Proyectos (`/api/openapi`)
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| `POST` | `/api/openapi/generate-backend/:id` | Generar proyecto Spring Boot | ✅ Sí |
+| `POST` | `/api/openapi/generate-flutter/:id` | Generar aplicación Flutter | ✅ Sí |
+| `POST` | `/api/openapi/generate-fullstack/:id` | Generar Full-Stack (Backend + Frontend) | ✅ Sí |
+| `GET` | `/api/openapi/download/:filename` | Descargar proyecto generado (ZIP) | ❌ No |
+
+**Ejemplo de generación Full-Stack:**
+```json
+POST /api/openapi/generate-fullstack/123
+Response:
+{
+  "success": true,
+  "backendUrl": "http://localhost:3001/api/openapi/download/spring-backend-123.zip",
+  "frontendUrl": "http://localhost:3001/api/openapi/download/flutter-frontend-123.zip"
+}
+```
+
+### 🤖 Asistente IA (`/api/assistant`)
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| `POST` | `/api/assistant/analyze` | Analizar diagrama con IA | ❌ No |
+| `POST` | `/api/assistant/execute` | Ejecutar acción sugerida por IA | ❌ No |
+| `POST` | `/api/assistant/chat/:diagramId` | Chat contextual con diagrama | ✅ Sí |
+
+**Ejemplo de análisis:**
+```json
+POST /api/assistant/analyze
+{
+  "diagram": {
+    "titulo": "Sistema de Ventas",
+    "classes": [...],
+    "relations": [...]
+  },
+  "intent": "analyze",
+  "user_message": "¿Qué mejoras recomiendas?"
+}
+```
+
+### 📨 Invitaciones y Colaboración (`/api/invitations`)
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| `POST` | `/api/invitations/:diagramId/invitations` | Generar código de invitación | ✅ Sí |
+| `GET` | `/api/invitations/:diagramId/invitations/all` | Listar todas las invitaciones | ✅ Sí |
+| `POST` | `/api/invitations/:diagramId/invitations/:codigo/regenerate` | Regenerar código | ✅ Sí |
+| `GET` | `/api/invitations/:diagramId/invitations/:codigo/resend` | Reenviar invitación | ✅ Sí |
+| `DELETE` | `/api/invitations/:diagramId/invitations/:codigo` | Invalidar código | ✅ Sí |
+| `POST` | `/api/invitations/accept` | Aceptar invitación con código | ✅ Sí |
+| `GET` | `/api/invitations/code/:codigo` | Validar código de invitación | ✅ Sí |
+| `GET` | `/api/invitations/invitados` | Diagramas donde soy invitado | ✅ Sí |
+| `GET` | `/api/invitations/:id/users` | Obtener usuarios del diagrama | ✅ Sí |
+| `PUT` | `/api/invitations/:id/permissions` | Cambiar permisos de usuario | ✅ Sí |
+| `DELETE` | `/api/invitations/:id/users` | Eliminar usuario del diagrama | ✅ Sí |
+
+**Permisos disponibles:**
+- `propietario` - Control total
+- `editor` - Puede editar
+- `visualizador` - Solo lectura
+
+### 🔌 Socket.IO - Eventos en Tiempo Real
+
+El sistema utiliza **Socket.IO** para colaboración en tiempo real. Los usuarios pueden ver cambios simultáneos en diagramas.
+
+#### 📡 Eventos del Cliente → Servidor
+
+| Evento | Descripción | Datos |
+|--------|-------------|-------|
+| `join-room` | Unirse a una sala (diagrama) | `roomId, callback` |
+| `join-diagram` | Alias para join-room | `{ roomId }, callback` |
+| `get-online-users` | Solicitar lista de usuarios conectados | `roomId, callback` |
+| `update-diagram` | Actualizar diagrama completo | `{ roomId, diagram }` |
+| `move-class` | Mover una clase | `{ roomId, classId, position }` |
+| `mouse-move` | Compartir posición del cursor | `{ roomId, mouseX, mouseY }` |
+| `add-class` | Agregar nueva clase | `{ roomId, newClass }` |
+| `update-class` | Actualizar clase existente | `{ roomId, classId, updatedData }` |
+| `delete-class` | Eliminar clase | `{ roomId, classId }` |
+| `add-relation` | Agregar relación | `{ roomId, newRelation }` |
+| `update-relation` | Actualizar relación | `{ roomId, relationId, updatedData }` |
+| `delete-relation` | Eliminar relación | `{ roomId, relationId }` |
+| `disconnect` | Desconexión del cliente | - |
+
+#### 📡 Eventos del Servidor → Cliente
+
+| Evento | Descripción | Datos |
+|--------|-------------|-------|
+| `user-joined` | Notifica que un usuario se unió | `{ userId, username, socketId }` |
+| `user-left` | Notifica que un usuario se desconectó | `{ userId, username, socketId }` |
+| `online-users` | Lista completa de usuarios en línea | `[{ socketId, userId, username }]` |
+| `presence-update` | Actualización de presencia | `{ onlineUsers: [...] }` |
+| `diagram-updated` | Diagrama actualizado | `diagram` |
+| `class-moved` | Clase movida | `{ classId, position }` |
+| `mouse-moved` | Cursor de otro usuario | `{ mouseX, mouseY, userId, username }` |
+| `class-added` | Nueva clase agregada | `{ newClass }` |
+| `class-updated` | Clase actualizada | `{ classId, updatedData }` |
+| `class-deleted` | Clase eliminada | `{ classId }` |
+| `relation-added` | Nueva relación agregada | `{ newRelation }` |
+| `relation-updated` | Relación actualizada | `{ relationId, updatedData }` |
+| `relation-deleted` | Relación eliminada | `{ relationId }` |
+
+**Ejemplo de conexión Socket.IO (Frontend):**
+```javascript
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:3001', {
+  auth: { token: 'JWT_TOKEN_HERE' }
+});
+
+// Unirse a un diagrama
+socket.emit('join-room', 'diagrama-123', (response) => {
+  console.log('Usuarios conectados:', response.onlineUsers);
+});
+
+// Escuchar cambios en tiempo real
+socket.on('diagram-updated', (diagram) => {
+  console.log('Diagrama actualizado:', diagram);
+});
+
+// Ver cursores de otros usuarios
+socket.on('mouse-moved', ({ mouseX, mouseY, username }) => {
+  console.log(`${username} movió el cursor a:`, mouseX, mouseY);
+});
+```
 
 ## Funcionalidades Detalladas
 
-### Generador de Spring Boot
+### 🧹 Sistema de Limpieza Automática
+
+El sistema incluye un **limpiador automático de archivos temporales** que se ejecuta en segundo plano para mantener el servidor optimizado.
+
+**Características:**
+- **Limpieza automática** cada 30 minutos
+- **Retención de 2 horas** para archivos generados
+- **Protección de archivos recientes** (< 2 horas)
+- **Logs detallados** de limpieza
+- **Exclusión de archivos importantes** (.gitkeep, .env, etc.)
+
+**Configuración en `utils/tempCleaner.js`:**
+```javascript
+const CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutos
+const MAX_FILE_AGE = 2 * 60 * 60 * 1000; // 2 horas
+```
+
+**Inicio automático:**
+El limpiador se inicia automáticamente al arrancar el servidor:
+```javascript
+// En index.js
+const { startCleanupScheduler } = require('./utils/tempCleaner');
+startCleanupScheduler(); // Inicia limpieza automática
+```
+
+**Archivos que se limpian:**
+- Proyectos Spring Boot generados (`temp/spring-backend-*`)
+- Aplicaciones Flutter generadas (`temp/flutter-frontend-*`)
+- Archivos ZIP de descarga (`temp/*.zip`)
+
+**Archivos protegidos:**
+- `.gitkeep`
+- `.env`
+- Archivos con menos de 2 horas de antigüedad
+
+### 🏗️ Generador de Spring Boot
 
 El sistema incluye un **generador completo** que crea proyectos Spring Boot funcionales con:
 
@@ -276,6 +542,125 @@ socket.emit('mouse-move', {
     mouseX: 100, 
     mouseY: 200 
 });
+```
+
+### 🤖 Asistente IA Integrado
+
+El sistema incluye un **asistente IA avanzado** que utiliza modelos de lenguaje (GPT-4, Claude) para análisis y mejora de diagramas UML.
+
+#### Características del Asistente
+- **Análisis automático** de estructura y relaciones
+- **Chat contextual** específico para cada diagrama
+- **Sugerencias inteligentes** de mejora
+- **Validación de relaciones** y estructura de datos
+- **Generación asistida** de clases y atributos
+- **Detección de problemas** en el diseño
+
+#### Modos de Operación
+```javascript
+// En .env
+AGENT_MODE=auto        // Automático (recomendado)
+AGENT_MODE=chat        // Solo chat
+AGENT_MODE=responses   // Solo respuestas estructuradas
+AGENT_MODE=raw         // Modo raw (debugging)
+```
+
+#### Intenciones Soportadas
+| Intent | Descripción |
+|--------|-------------|
+| `analyze` | Análisis general del diagrama |
+| `improve` | Sugerencias de mejora |
+| `validate` | Validación de estructura |
+| `create` | Ayuda para crear clases |
+| `free_chat` | Chat libre contextual |
+
+#### Ejemplo de Análisis
+```javascript
+POST /api/assistant/analyze
+{
+  "diagram": {
+    "titulo": "Sistema de Ventas",
+    "classes": [
+      {
+        "id": "class-1",
+        "name": "Cliente",
+        "attributes": ["id (PK)", "nombre", "email"],
+        "methods": []
+      }
+    ],
+    "relations": []
+  },
+  "intent": "analyze",
+  "user_message": "¿Qué mejoras recomiendas?"
+}
+
+// Respuesta
+{
+  "analysis": {
+    "summary": "El diagrama tiene una estructura básica. Recomiendo agregar...",
+    "intent": "improve"
+  },
+  "proposal": {
+    "patch": {
+      "classes": [...],  // Clases nuevas o modificadas
+      "relations": [...]  // Relaciones sugeridas
+    }
+  }
+}
+```
+
+#### Chat Contextual
+```javascript
+POST /api/assistant/chat/123
+{
+  "message": "Agrega una clase Producto con precio y stock",
+  "intent": "create"
+}
+
+// Respuesta con propuesta estructurada
+{
+  "response": "He agregado la clase Producto...",
+  "proposal": {
+    "patch": {
+      "classes": [
+        {
+          "id": "class-producto-1730345678",
+          "name": "Producto",
+          "attributes": [
+            "id (PK)",
+            "nombre",
+            "precio",
+            "stock"
+          ],
+          "methods": [],
+          "x": 300,
+          "y": 200
+        }
+      ],
+      "relations": []
+    }
+  }
+}
+```
+
+#### Configuración del Agente
+```env
+# Variables en .env
+AGENT_URL=https://tu-agente.agents.do-ai.run
+AGENT_TOKEN=tu_token_secreto
+AGENT_MODEL=gpt-4o-mini
+AGENT_DEBUG=true
+AGENT_MOCK=false
+AGENT_MODE=auto
+```
+
+#### Fallback y Mock
+El asistente incluye un **modo mock** para desarrollo sin API:
+```javascript
+// Activar mock en .env
+AGENT_MOCK=true
+
+// El agente retornará respuestas simuladas sin llamar a la API
 ```
 
 ### Sistema de Autenticación
@@ -1439,6 +1824,310 @@ test: agregar o corregir tests
 ## Licencia
 
 Este proyecto está bajo la Licencia ISC. Ver archivo `LICENSE` para más detalles.
+
+## 📚 Ejemplos de Uso Completo
+
+### Ejemplo 1: Crear un Sistema de Ventas Completo
+
+**Paso 1: Crear diagrama UML**
+```json
+POST /api/diagramas
+Authorization: Bearer YOUR_JWT_TOKEN
+{
+  "titulo": "Sistema de Ventas",
+  "contenido": {
+    "classes": [
+      {
+        "id": "class-cliente",
+        "name": "Cliente",
+        "attributes": ["id (PK)", "nombre", "email", "telefono"],
+        "methods": [],
+        "x": 100,
+        "y": 100
+      },
+      {
+        "id": "class-producto",
+        "name": "Producto",
+        "attributes": ["id (PK)", "nombre", "precio", "stock"],
+        "methods": [],
+        "x": 400,
+        "y": 100
+      },
+      {
+        "id": "class-venta",
+        "name": "Venta",
+        "attributes": ["id (PK)", "fecha", "total", "cliente_id (FK)", "producto_id (FK)"],
+        "methods": [],
+        "x": 250,
+        "y": 300
+      }
+    ],
+    "relations": [
+      {
+        "id": "rel-1",
+        "type": "Asociación",
+        "source": "class-venta",
+        "target": "class-cliente",
+        "multiplicidadOrigen": "N",
+        "multiplicidadDestino": "1"
+      },
+      {
+        "id": "rel-2",
+        "type": "Asociación",
+        "source": "class-venta",
+        "target": "class-producto",
+        "multiplicidadOrigen": "N",
+        "multiplicidadDestino": "1"
+      }
+    ]
+  }
+}
+```
+
+**Paso 2: Generar proyecto Full-Stack**
+```bash
+# Generar backend Spring Boot + frontend Flutter
+POST /api/openapi/generate-fullstack/123
+Authorization: Bearer YOUR_JWT_TOKEN
+
+# Respuesta:
+{
+  "success": true,
+  "backendUrl": "http://localhost:3001/api/openapi/download/spring-backend-1730345678.zip",
+  "frontendUrl": "http://localhost:3001/api/openapi/download/flutter-frontend-1730345678.zip"
+}
+```
+
+**Paso 3: Descargar y ejecutar**
+```powershell
+# Descargar los archivos ZIP
+curl http://localhost:3001/api/openapi/download/spring-backend-1730345678.zip -o backend.zip
+curl http://localhost:3001/api/openapi/download/flutter-frontend-1730345678.zip -o frontend.zip
+
+# Descomprimir
+Expand-Archive backend.zip -DestinationPath ./backend
+Expand-Archive frontend.zip -DestinationPath ./frontend
+
+# Ejecutar backend
+cd backend
+./mvnw spring-boot:run
+# Backend corriendo en http://localhost:8080
+
+# Ejecutar frontend (en otra terminal)
+cd ../frontend
+flutter pub get
+flutter run
+```
+
+### Ejemplo 2: Colaboración en Tiempo Real
+
+**Frontend con Socket.IO:**
+```javascript
+import io from 'socket.io-client';
+
+// Conectar con autenticación
+const socket = io('http://localhost:3001', {
+  auth: { token: localStorage.getItem('jwt_token') }
+});
+
+// Unirse al diagrama
+socket.emit('join-room', 'diagrama-123', (response) => {
+  console.log('Usuarios conectados:', response.onlineUsers);
+  // Ejemplo: [{ userId: 1, username: "Juan", socketId: "abc123" }]
+});
+
+// Escuchar cambios en tiempo real
+socket.on('diagram-updated', (diagram) => {
+  console.log('Diagrama actualizado por otro usuario:', diagram);
+  updateLocalDiagram(diagram);
+});
+
+// Ver cursores de otros usuarios
+socket.on('mouse-moved', ({ mouseX, mouseY, username }) => {
+  showCollaboratorCursor(username, mouseX, mouseY);
+});
+
+// Enviar cambios a otros usuarios
+function handleDiagramChange(updatedDiagram) {
+  socket.emit('update-diagram', {
+    roomId: 'diagrama-123',
+    diagram: updatedDiagram
+  });
+}
+
+// Enviar posición del mouse
+canvas.addEventListener('mousemove', (e) => {
+  socket.emit('mouse-move', {
+    roomId: 'diagrama-123',
+    mouseX: e.clientX,
+    mouseY: e.clientY
+  });
+});
+```
+
+### Ejemplo 3: Usar el Asistente IA
+
+**Análisis de diagrama:**
+```javascript
+// Analizar diagrama con IA
+const analyzeResponse = await fetch('http://localhost:3001/api/assistant/analyze', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    diagram: currentDiagram,
+    intent: 'improve',
+    user_message: '¿Qué mejoras recomiendas para este sistema de ventas?'
+  })
+});
+
+const result = await analyzeResponse.json();
+console.log('Análisis:', result.analysis.summary);
+console.log('Propuesta:', result.proposal.patch);
+
+// Aplicar propuesta al diagrama
+if (result.proposal.patch) {
+  applyPatchToDiagram(result.proposal.patch);
+}
+```
+
+**Chat contextual:**
+```javascript
+// Chat con el asistente sobre un diagrama específico
+const chatResponse = await fetch('http://localhost:3001/api/assistant/chat/123', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    message: 'Agrega una clase Descuento con porcentaje y fecha de validez',
+    intent: 'create'
+  })
+});
+
+const chatResult = await chatResponse.json();
+console.log('Respuesta IA:', chatResult.response);
+
+// Aplicar sugerencias
+if (chatResult.proposal) {
+  applyAIProposal(chatResult.proposal);
+}
+```
+
+### Ejemplo 4: Sistema de Invitaciones
+
+**Generar código de invitación:**
+```javascript
+// Propietario genera código
+POST /api/invitations/123/invitations
+Authorization: Bearer PROPIETARIO_TOKEN
+{
+  "permiso": "editor",  // o "visualizador"
+  "email": "invitado@example.com"
+}
+
+// Respuesta:
+{
+  "codigo": "INV-ABC123XYZ",
+  "permiso": "editor",
+  "expiraEn": "2024-11-06T10:00:00Z"
+}
+```
+
+**Aceptar invitación:**
+```javascript
+// Usuario invitado acepta
+POST /api/invitations/accept
+Authorization: Bearer INVITADO_TOKEN
+{
+  "codigoInvitacion": "INV-ABC123XYZ"
+}
+
+// Respuesta:
+{
+  "success": true,
+  "diagrama": { id: 123, titulo: "Sistema de Ventas" },
+  "permiso": "editor"
+}
+```
+
+**Gestionar permisos:**
+```javascript
+// Cambiar permisos de un usuario
+PUT /api/invitations/123/permissions
+Authorization: Bearer PROPIETARIO_TOKEN
+{
+  "usuarioId": 456,
+  "nuevoPermiso": "visualizador"
+}
+
+// Eliminar usuario del diagrama
+DELETE /api/invitations/123/users
+Authorization: Bearer PROPIETARIO_TOKEN
+{
+  "usuarioId": 456
+}
+```
+
+## 🎯 Características Adicionales
+
+### Proyectos Generados Incluyen
+
+**Spring Boot:**
+- ✅ Estructura Maven completa
+- ✅ `pom.xml` con todas las dependencias
+- ✅ Scripts de ejecución (`start.sh`, `start.bat`)
+- ✅ Dockerfile para containerización
+- ✅ Postman Collection para testing
+- ✅ README con documentación completa
+
+**Flutter:**
+- ✅ Estructura de proyecto completa
+- ✅ `pubspec.yaml` con dependencias
+- ✅ Scripts de setup y regeneración
+- ✅ Configuración para Android/iOS/Web
+- ✅ Navegación pre-configurada
+- ✅ Tema personalizable
+
+### Variables de Entorno Completas
+
+```env
+# ========== SERVIDOR ==========
+PORT=3001
+NODE_ENV=development
+
+# ========== BASE DE DATOS (Desarrollo) ==========
+DB_NAME=diagramador
+DB_USER=admin
+DB_PASSWORD=admin123
+DB_HOST=localhost
+DB_PORT=5432
+DB_SSL=false
+
+# ========== BASE DE DATOS (Producción) ==========
+# NODE_ENV=production
+# DB_HOST=db-postgresql-nyc3-88273-do-user-24994056-0.m.db.ondigitalocean.com
+# DB_PORT=25060
+# DB_NAME=defaultdb
+# DB_USER=doadmin
+# DB_PASSWORD=AVNS_KaENTyk7NioFK8Xu9eQ
+# DB_SSL=true
+
+# ========== SEGURIDAD ==========
+JWT_SECRET=tu_secreto_jwt_muy_seguro_aqui_cambiar_en_produccion
+
+# ========== ASISTENTE IA ==========
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxx
+AGENT_URL=https://tu-agente.agents.do-ai.run
+AGENT_TOKEN=tu_token_agente
+AGENT_MODEL=gpt-4o-mini
+AGENT_DEBUG=true
+AGENT_MOCK=false
+AGENT_MODE=auto
+
+# ========== CORS ==========
+FRONT_ORIGIN=http://localhost:3000
+```
 
 ## Contacto
 

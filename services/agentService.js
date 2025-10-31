@@ -53,54 +53,150 @@ function authHeaderVariants() {
 function extractFirstJson(text) {
   if (!text) return null;
 
-  // 1) bloque ```json ... ```
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const blob = fence ? fence[1].trim() : text.trim();
-
-  // 2) intenta recortar primer {...} balanceado
-  const first = blob.indexOf('{');
-  const last = blob.lastIndexOf('}');
-  if (first !== -1 && last !== -1 && last > first) {
-    const slice = blob.slice(first, last + 1);
-    try { return JSON.parse(slice); } catch {}
+  // Diagnostic: length of incoming text
+  if (AGENT_DEBUG) {
+    try {
+      console.log('extractFirstJson: incoming text length:', String(text).length);
+    } catch (e) {}
   }
 
-  // 3) intento directo
-  try { return JSON.parse(blob); } catch {}
+  // 1) If there's a fenced code block with json, prefer that content
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fence ? fence[1].trim() : text;
+
+  // 2) Try direct parse of the whole candidate first (avoid truncation)
+  try {
+    return JSON.parse(candidate);
+  } catch (e) {
+    // continue to attempt finding a balanced JSON object inside the candidate
+  }
+
+  // 3) Find the first balanced JSON object using a simple stack (avoids naive lastIndexOf issues)
+  const str = String(candidate);
+  let start = -1;
+  let depth = 0;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch === '{') {
+      if (start === -1) start = i;
+      depth++;
+    } else if (ch === '}') {
+      if (depth > 0) depth--;
+      if (depth === 0 && start !== -1) {
+        const slice = str.slice(start, i + 1);
+        try {
+          return JSON.parse(slice);
+        } catch (e) {
+          // if parsing fails, continue searching for next balanced block
+          start = -1;
+        }
+      }
+    }
+  }
+
+  // 4) As a last resort, try a regex to grab a large {...} block
+  const regexMatch = str.match(/\{[\s\S]{100,}\}/);
+  if (regexMatch) {
+    try { return JSON.parse(regexMatch[0]); } catch (e) {}
+  }
+
+  // Failed to find parsable JSON
+  if (AGENT_DEBUG) console.warn('extractFirstJson: no JSON found in text (preview):', String(candidate).slice(0, 1000));
   return null;
 }
 
 // Función para transformar formato antiguo (patch array) al nuevo formato (classes/relations)
 function transformPatchToNewFormat(parsed) {
   if (!parsed?.proposal?.patch) return parsed;
-  
-  // Si ya está en el nuevo formato, devolverlo tal como está
-  if (parsed.proposal.patch.classes && parsed.proposal.patch.relations) {
-    return parsed;
+
+  // Diagnostic: log input patch format
+  const inputPatch = parsed.proposal.patch;
+  if (AGENT_DEBUG) {
+    try {
+      const isArray = Array.isArray(inputPatch);
+      const isNewFormat = inputPatch.classes !== undefined || inputPatch.relations !== undefined;
+      console.log('transformPatchToNewFormat: input is array?', isArray, '| has classes/relations?', isNewFormat);
+    } catch(e){}
   }
-  
+
+  // Si ya está en el nuevo formato CON ARRAYS VÁLIDOS, devolverlo tal como está
+  if (!Array.isArray(inputPatch) && typeof inputPatch === 'object') {
+    // Ensure classes and relations exist and are arrays
+    const classes = Array.isArray(inputPatch.classes) ? inputPatch.classes : [];
+    const relations = Array.isArray(inputPatch.relations) ? inputPatch.relations : [];
+
+    // If it has both arrays (even if empty), it's already in the right format
+    if (inputPatch.classes !== undefined || inputPatch.relations !== undefined) {
+      if (AGENT_DEBUG) {
+        console.log('transformPatchToNewFormat: already in new format. classes:', classes.length, 'relations:', relations.length);
+      }
+      return {
+        ...parsed,
+        proposal: {
+          patch: {
+            classes,
+            relations
+          }
+        }
+      };
+    }
+  }
+
   // Si es un array (formato antiguo), transformarlo
-  if (Array.isArray(parsed.proposal.patch)) {
+  if (Array.isArray(inputPatch)) {
     const classes = [];
     const relations = [];
-    
-    for (const operation of parsed.proposal.patch) {
-      switch (operation.type) {
+
+    for (const operation of inputPatch) {
+      // Some agents send `op` instead of `type`, and use names like 'update_class'
+      const opType = operation.type || operation.op || '';
+      // Normalize various op names to cover common variants
+      const normalized = opType.toString().toLowerCase();
+      switch (normalized) {
         case 'add_class':
         case 'modify_class':
+        case 'update_class':
           if (operation.data) {
-            classes.push(operation.data);
+            // Ensure the item has an id field
+            const item = { ...(operation.data || {}) };
+            if (!item.id && operation.id) item.id = operation.id;
+            classes.push(item);
           }
           break;
         case 'add_relation':
         case 'modify_relation':
+        case 'update_relation':
           if (operation.data) {
-            relations.push(operation.data);
+            const item = { ...(operation.data || {}) };
+            if (!item.id && operation.id) item.id = operation.id;
+            relations.push(item);
           }
           break;
+        default:
+          // Fallback: if the operation object looks like a class or relation, include it
+          if (operation && typeof operation === 'object') {
+            if (operation.name && (operation.attributes || operation.methods)) {
+              // treat as class
+              const item = { ...(operation || {}) };
+              if (!item.id && operation.id) item.id = operation.id;
+              classes.push(item);
+            } else if (operation.source && operation.target) {
+              const item = { ...(operation || {}) };
+              if (!item.id && operation.id) item.id = operation.id;
+              relations.push(item);
+            } else if (operation.data && operation.data.name) {
+              const item = { ...(operation.data || {}) };
+              if (!item.id && operation.id) item.id = operation.id;
+              classes.push(item);
+            }
+          }
       }
     }
-    
+
+    if (AGENT_DEBUG) {
+      console.log('transformPatchToNewFormat: converted array format. classes:', classes.length, 'relations:', relations.length);
+    }
+
     return {
       ...parsed,
       proposal: {
@@ -111,21 +207,62 @@ function transformPatchToNewFormat(parsed) {
       }
     };
   }
-  
+
   return parsed;
 }
 
 function coerceAgentObjectFromText(text, { intent } = {}) {
-  const parsed = extractFirstJson(text);
-  if (parsed && (parsed.analysis || parsed.proposal)) {
-    return transformPatchToNewFormat(parsed);
+  // 1) Try to parse the entire text directly (fast-path)
+  if (!text) return { analysis: { summary: '', intent }, proposal: { patch: { classes: [], relations: [] } } };
+  try {
+    const direct = JSON.parse(text);
+    if (direct && (direct.analysis || direct.proposal)) {
+      const normalized = transformPatchToNewFormat(direct);
+      if (AGENT_DEBUG) {
+        try {
+          console.log('coerceAgentObjectFromText: parsed direct JSON. classes:', (normalized.proposal?.patch?.classes||[]).length, 'relations:', (normalized.proposal?.patch?.relations||[]).length);
+        } catch(e){}
+      }
+      return normalized;
+    }
+  } catch (e) {
+    // not direct JSON; continue to extraction
   }
 
-  // Fallback mínimo utilizable para el controller/frontend
-  return {
-    analysis: { summary: (text || '').slice(0, 4000), intent },
-    proposal: { patch: { classes: [], relations: [] } }
+  // 2) Try to extract a JSON object from the text
+  const parsed = extractFirstJson(text);
+  if (parsed && (parsed.analysis || parsed.proposal)) {
+    const norm = transformPatchToNewFormat(parsed);
+    if (AGENT_DEBUG) {
+      try {
+        console.log('coerceAgentObjectFromText: extracted JSON. classes:', (norm.proposal?.patch?.classes||[]).length, 'relations:', (norm.proposal?.patch?.relations||[]).length);
+      } catch(e){}
+    }
+    return norm;
+  }
+
+  // 3) Fallback: ensure we always return a properly structured object
+  // even if parsing failed - never return with empty/undefined patch
+  const fallbackObject = {
+    analysis: {
+      summary: (text || '').slice(0, 4000),
+      intent
+    },
+    proposal: {
+      patch: {
+        classes: [],
+        relations: []
+      }
+    }
   };
+
+  if (AGENT_DEBUG) {
+    console.warn('coerceAgentObjectFromText: falling back — could not parse JSON. Raw text length:', String(text).length);
+    try { console.warn('coerceAgentObjectFromText: preview start:', String(text).slice(0, 2000)); } catch(e){}
+    try { console.warn('coerceAgentObjectFromText: preview end:', String(text).slice(-1000)); } catch(e){}
+  }
+
+  return fallbackObject;
 }
 
 // ---------- Construcción de bodies ----------
@@ -323,12 +460,22 @@ async function callAgent({ diagram, intent = 'free_chat', user_message = '', for
         const { contentString, object } = extractAnswer(b.kind, data);
 
         if (contentString) {
+          // Diagnostic log: show a trimmed preview of the contentString and lengths so we can see why parsing might fail
+          if (AGENT_DEBUG) {
+            try {
+              console.log('agent contentString length:', String(contentString).length);
+              console.log('agent contentString preview start:', String(contentString).slice(0, 2000));
+              console.log('agent contentString preview end:', String(contentString).slice(-500));
+            } catch(e){}
+          }
           const obj = coerceAgentObjectFromText(contentString, { intent });
+          if (AGENT_DEBUG) console.log('agent coerce result (obj):', obj && typeof obj === 'object' ? Object.keys(obj) : typeof obj);
           if (obj?.analysis || obj?.proposal) {
             console.log('Normalizado a objeto de agente (analysis/proposal).');
             return obj;
           }
-          // Ultra fallback
+          // Ultra fallback: return minimal object but also log so we can detect frequent fallbacks
+          if (AGENT_DEBUG) console.warn('callAgent: using ultra fallback (no analysis/proposal parsed). Returning summary-only object.');
           return { analysis: { summary: contentString, intent }, proposal: { patch: { classes: [], relations: [] } } };
         }
 

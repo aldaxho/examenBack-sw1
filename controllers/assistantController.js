@@ -29,6 +29,12 @@ async function analyze(req, res) {
 
     const data = await callAgent({ diagram: baseDiagram, intent: intent || 'free_chat', user_message: user_message || '', forceMock });
 
+    // Diagnostic: log the raw agent response when debugging
+    if (process.env.AGENT_DEBUG === 'true') {
+      try { console.log('assistantController.analyze: raw agent response keys:', data && typeof data === 'object' ? Object.keys(data) : typeof data); } catch(e){}
+      try { console.log('assistantController.analyze: raw agent response (preview):', JSON.stringify(data).slice(0, 2000)); } catch(e){}
+    }
+
     if (!data || !data.analysis) {
       console.error('Invalid agent response shape:', data);
       return res.status(502).json({ error: 'invalid_agent_response', data });
@@ -51,53 +57,90 @@ async function chatWithDiagram(req, res) {
       return res.status(400).json({ error: 'diagramId y user_message requeridos' });
     }
 
-    // Cargar diagrama actual
-    const diagrama = await Diagrama.findByPk(diagramId);
-    if (!diagrama) {
+    // Cargar diagrama desde BD para verificar permisos
+    const diagramaDB = await Diagrama.findByPk(diagramId);
+    if (!diagramaDB) {
       return res.status(404).json({ error: 'Diagrama no encontrado' });
     }
 
     // Verificar permisos (propietario o colaborador)
-    const tieneAcceso = diagrama.usuarioId === userId || 
+    const tieneAcceso = diagramaDB.usuarioId === userId || 
       await DiagramaUsuario.findOne({
-        where: { diagramaId, usuarioId, estado: 'aceptado' }
+        where: { diagramaId: diagramId, usuarioId: userId, estado: 'aceptado' }
       });
 
     if (!tieneAcceso) {
       return res.status(403).json({ error: 'Sin acceso al diagrama' });
     }
 
+    // Preferir diagrama enviado en body (estado del cliente no guardado) para el contexto del agente
+    const diagramaParaAgente = req.body && req.body.diagram ? req.body.diagram : (diagramaDB.contenido || diagramaDB);
+    const usedSavedDiagram = !req.body || !req.body.diagram;
+
     // Llamar al agente con contexto del diagrama
     const data = await callAgent({
-      diagram: diagrama.contenido,
+      diagram: diagramaParaAgente,
       intent,
       user_message
     });
 
+    // Diagnostic logging: inspect proposal/patch presence
+    if (process.env.AGENT_DEBUG === 'true') {
+      try { console.log('assistantController.chatWithDiagram: agent response keys:', data && typeof data === 'object' ? Object.keys(data) : typeof data); } catch(e){}
+      try { console.log('assistantController.chatWithDiagram: proposal preview:', JSON.stringify(data.proposal || {}).slice(0, 2000)); } catch(e){}
+    }
+
     // Si el agente propone cambios, aplicarlos en tiempo real vía Socket.IO
-    if (data.proposal && data.proposal.patch && (data.proposal.patch.classes || data.proposal.patch.relations)) {
+    const hasPatch = data.proposal?.patch &&
+                     (Array.isArray(data.proposal.patch.classes) || Array.isArray(data.proposal.patch.relations));
+    const hasAnyChanges = (data.proposal?.patch?.classes?.length > 0) || (data.proposal?.patch?.relations?.length > 0);
+
+    if (hasPatch && hasAnyChanges) {
       const { patch } = data.proposal;
-      
-      // Aplicar patch al diagrama
-      const updatedContent = applyPatchNewFormat(diagrama.contenido, patch);
-      
+
+      // Aplicar patch al diagrama (usar el diagrama actual como base)
+      const baseDiagram = diagramaParaAgente || (diagramaDB.contenido || diagramaDB);
+      const updatedContent = applyPatchNewFormat(baseDiagram, patch);
+
       // Guardar en BD
-      await diagrama.update({ contenido: updatedContent });
-      
+      await diagramaDB.update({ contenido: updatedContent });
+
       // Emitir cambios en tiempo real a todos los usuarios en la sala
+      // Diagnostic: log what will be emitted so we can verify server-side emission
+      try {
+        console.log('assistantController.chatWithDiagram: emitting agent-update to room', diagramId);
+        console.log('  patch.classes:', (patch.classes||[]).length, 'items');
+        console.log('  patch.relations:', (patch.relations||[]).length, 'items');
+        console.log('  updatedContent.classes:', (updatedContent.classes||[]).length, 'items');
+        console.log('  updatedContent.relations:', (updatedContent.relations||[]).length, 'items');
+        console.log('  message:', (data.messages && data.messages[0]) ? String(data.messages[0]).slice(0,200) : (data.analysis && data.analysis.summary ? String(data.analysis.summary).slice(0,200) : 'no-msg'));
+      } catch(e) {
+        console.error('Error en log de emisión:', e);
+      }
+
       req.app.get('io').to(diagramId).emit('agent-update', {
         type: 'diagram_modified',
         patch,
         updatedDiagram: updatedContent,
         message: data.messages?.[0] || 'Diagrama actualizado por el asistente',
-        timestamp: new Date()
+        timestamp: new Date(),
+        usedSavedDiagram
       });
+    } else {
+      // Log si no hay cambios
+      if (process.env.AGENT_DEBUG === 'true') {
+        console.log('assistantController.chatWithDiagram: No changes to apply');
+        console.log('  hasPatch:', hasPatch);
+        console.log('  hasAnyChanges:', hasAnyChanges);
+        console.log('  proposal.patch:', data.proposal?.patch);
+      }
     }
 
     return res.json({
       ...data,
       diagramId,
-      applied: !!(data.proposal?.patch?.classes?.length || data.proposal?.patch?.relations?.length)
+      applied: !!(data.proposal?.patch?.classes?.length || data.proposal?.patch?.relations?.length),
+      usedSavedDiagram
     });
 
   } catch (err) {
