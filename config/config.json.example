@@ -1,0 +1,24 @@
+{
+  "development": {
+    "username": "TU_USUARIO_LOCAL",
+    "password": "TU_PASSWORD_LOCAL",
+    "database": "TU_BASE_DE_DATOS_LOCAL",
+    "host": "localhost",
+    "port": 5432,
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "TU_USUARIO_PRODUCCION",
+    "password": "TU_PASSWORD_PRODUCCION",
+    "database": "TU_BASE_DE_DATOS_PRODUCCION",
+    "host": "TU_HOST_PRODUCCION.db.ondigitalocean.com",
+    "port": 25060,
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
+  }
+}

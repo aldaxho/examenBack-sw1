@@ -1,6 +1,8 @@
 # 🚀 Sistema de Generación Automática Full-Stack desde Diagramas UML
 
-## � Tabla de Contenidos
+> **🎯 Para deployment en producción, consulta [DEPLOYMENT.md](./DEPLOYMENT.md)**
+
+## 📋 Tabla de Contenidos
 
 
 1. [Descripción del Proyecto](#-descripción-del-proyecto)
@@ -794,12 +796,15 @@ npm run db:create
 ```
 
 6. **Ejecutar migraciones de base de datos**
-```powershell
+```bash
 # Desarrollo (local)
 npm run db:migrate
 
-# Producción (DigitalOcean)
-set NODE_ENV=production; npm run db:migrate
+# Producción (DigitalOcean) - Linux/Mac
+NODE_ENV=production npm run db:migrate
+
+# Producción - Alternativa (funciona en todos los OS)
+npm run db:migrate --production
 ```
 
 7. **Iniciar el servidor**
@@ -845,12 +850,21 @@ node index.js
 | `npm run db:drop` | Eliminar base de datos | ⚠️ Cuidado |
 
 ### Comandos con Entornos
-```powershell
+```bash
 # Desarrollo (default)
 npm run db:migrate
 
-# Producción
-set NODE_ENV=production; npm run db:migrate
+# Producción (recomendado - funciona en todos los OS)
+npm run db:migrate --production
+
+# Producción - Alternativa Linux/Mac
+NODE_ENV=production npm run db:migrate
+
+# Producción - Alternativa Windows CMD
+set NODE_ENV=production && npm run db:migrate
+
+# Producción - Alternativa Windows PowerShell
+$env:NODE_ENV="production"; npm run db:migrate
 ```
 
 ## Variables de Entorno
