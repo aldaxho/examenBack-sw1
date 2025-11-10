@@ -1,13 +1,16 @@
-// services/agentService.js
+// Servicio para comunicarse con el agente de IA (OpenAI/DigitalOcean)
+// Este servicio se encarga de enviar diagramas al agente y recibir las modificaciones
+
+// Configuración del agente desde variables de entorno
 const AGENT_URL = (process.env.AGENT_URL || '').replace(/\/+$/, '');
 const AGENT_TOKEN = (process.env.AGENT_TOKEN || '').trim();
 const AGENT_MODEL = process.env.AGENT_MODEL || 'gpt-4o-mini';
-const AGENT_EXTRA_ENDPOINT = process.env.AGENT_EXTRA_ENDPOINT || ''; // e.g. /api/generate
+const AGENT_EXTRA_ENDPOINT = process.env.AGENT_EXTRA_ENDPOINT || '';
 const AGENT_DEBUG = (process.env.AGENT_DEBUG || 'false').toLowerCase() === 'true';
-const AGENT_MODE = (process.env.AGENT_MODE || 'auto').toLowerCase(); // auto|chat|responses|raw
+const AGENT_MODE = (process.env.AGENT_MODE || 'auto').toLowerCase();
 const AGENT_MOCK = (process.env.AGENT_MOCK || 'true').toLowerCase() === 'true';
 
-// ---------- Helpers de payload ----------
+// Preparar el mensaje del usuario con el diagrama y su petición
 function buildUserPayload({ diagram, intent, user_message }) {
   return JSON.stringify({
     diagram: diagram ?? { titulo: 'Sin título', classes: [], relations: [] },
@@ -16,8 +19,8 @@ function buildUserPayload({ diagram, intent, user_message }) {
   });
 }
 
+// Instrucciones para el agente sobre cómo debe responder
 function buildSystemPrompt() {
-  // Fuerza JSON con el esquema esperado por el frontend
   return [
     'Eres un agente experto en diagramas UML y bases de datos.',
     'DEVUELVE EXCLUSIVAMENTE un JSON con este esquema, sin texto extra ni bloques Markdown:',
@@ -42,6 +45,7 @@ function buildSystemPrompt() {
   ].join('\n');
 }
 
+// Diferentes formas de autenticación que puede usar el agente
 function authHeaderVariants() {
   return [
     { 'Authorization': `Bearer ${AGENT_TOKEN}` },

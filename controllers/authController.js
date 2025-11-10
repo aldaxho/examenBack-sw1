@@ -1,4 +1,4 @@
-// controllers/authController.js
+// Controlador de autenticación de usuarios
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Usuario } = require('../models');
@@ -6,20 +6,21 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-// Registro de Usuario
+// Registrar un nuevo usuario en el sistema
 exports.register = async (req, res) => {
   const { nombre, correo, contraseña } = req.body;
+  
   try {
-    // Verifica si el usuario ya existe
+    // Verificar si ya existe un usuario con ese correo
     const usuarioExistente = await Usuario.findOne({ where: { correo } });
     if (usuarioExistente) {
       return res.status(400).json({ mensaje: 'El correo ya está registrado.' });
     }
 
-    // Hashear la contraseña
+    // Encriptar la contraseña antes de guardarla
     const hashedPassword = await bcrypt.hash(contraseña, 10);
 
-    // Crear nuevo usuario
+    // Crear el nuevo usuario en la base de datos
     const nuevoUsuario = await Usuario.create({
       nombre,
       correo,
@@ -32,23 +33,24 @@ exports.register = async (req, res) => {
   }
 };
 
-// Login de Usuario
+// Iniciar sesión (Login)
 exports.login = async (req, res) => {
   const { correo, contraseña } = req.body;
+  
   try {
-    // Verifica si el usuario existe
+    // Buscar el usuario por correo
     const usuario = await Usuario.findOne({ where: { correo } });
     if (!usuario) {
       return res.status(400).json({ mensaje: 'Correo o contraseña incorrectos.' });
     }
 
-    // Comparar contraseñas
+    // Verificar que la contraseña sea correcta
     const contraseñaValida = await bcrypt.compare(contraseña, usuario.contraseña);
     if (!contraseñaValida) {
       return res.status(400).json({ mensaje: 'Correo o contraseña incorrectos.' });
     }
 
-    // Crear token JWT
+    // Crear token JWT que expira en 3 horas
     const token = jwt.sign({ id: usuario.id }, process.env.JWT_SECRET, { expiresIn: '3h' });
 
     res.status(200).json({ mensaje: 'Login exitoso', token });

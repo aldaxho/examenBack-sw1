@@ -78,13 +78,16 @@ async function generateSimpleSpringBootProject(diagramaJSON, titulo) {
   await createMainApplicationClass(srcDir);
   await createConfigurationClasses(configDir);
   await createPomXml(projectDir, entities);
-  await createApplicationProperties(resourcesDir);
+  const serverPort = await createApplicationProperties(resourcesDir);
   await createMavenWrapper(projectDir);
   await createUniversalStartScripts(projectDir);
   // Si el servidor de generación tiene Maven, se puede generar el JAR automáticamente:
   // await generateJarExecutable(projectDir);
-  await createReadme(projectDir, cleanTitulo, entities);
-  await createDockerfile(projectDir);
+  await createReadme(projectDir, cleanTitulo, entities, serverPort);
+  await createDockerfile(projectDir, serverPort);
+  await createDockerIgnore(projectDir);
+  await createDockerCompose(projectDir, serverPort);
+  await createDockerScripts(projectDir, serverPort);
   await createGitignore(projectDir);
   
   // Crear tests automáticos para validar la generación
@@ -992,6 +995,9 @@ spring.jpa.properties.hibernate.order_inserts=true
 spring.jpa.properties.hibernate.order_updates=true`;
 
   await fs.writeFile(path.join(resourcesDir, 'application.properties'), propertiesContent);
+  
+  // Retornar el puerto para usarlo en Docker
+  return availablePort;
 }
 
 // Crear Maven Wrapper
@@ -1341,219 +1347,346 @@ cmd /C exit /B %ERROR_CODE%`;
 
   await fs.writeFile(path.join(projectDir, 'mvnw.cmd'), mvnwCmd);
   
-  // Maven Wrapper Script para Unix/Linux
-  const mvnwSh = `#!/bin/sh
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
+  // Descargar Maven Wrapper Script para Unix/Linux desde la URL oficial
+  const mvnwUrl = 'https://raw.githubusercontent.com/takari/maven-wrapper/master/mvnw';
+  const mvnwPath = path.join(projectDir, 'mvnw');
+  
+  try {
+    console.log('📥 Descargando Maven Wrapper script (mvnw)...');
+    
+    let buffer;
+    
+    // Intentar primero con fetch (Node 18+)
+    if (typeof fetch === 'function') {
+      try {
+        const response = await fetch(mvnwUrl, { 
+          timeout: 30000,
+          redirect: 'follow'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        buffer = Buffer.from(arrayBuffer);
+      } catch (fetchError) {
+        console.warn('⚠️ Fetch falló, intentando con HTTPS nativo...');
+        buffer = null;
+      }
+    }
+    
+    // Fallback: usar módulo https nativo
+    if (!buffer) {
+      const https = require('https');
+      buffer = await new Promise((resolve, reject) => {
+        https.get(mvnwUrl, (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            https.get(res.headers.location, (redirectRes) => {
+              const chunks = [];
+              redirectRes.on('data', (chunk) => chunks.push(chunk));
+              redirectRes.on('end', () => resolve(Buffer.concat(chunks)));
+              redirectRes.on('error', reject);
+            }).on('error', reject).setTimeout(30000);
+          } else if (res.statusCode >= 400) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+          } else {
+            const chunks = [];
+            res.on('data', (chunk) => chunks.push(chunk));
+            res.on('end', () => resolve(Buffer.concat(chunks)));
+            res.on('error', reject);
+          }
+        }).on('error', reject).setTimeout(30000);
+      });
+    }
+    
+    await fs.writeFile(mvnwPath, buffer);
+    console.log('✅ Maven Wrapper script descargado correctamente');
+    
+  } catch (error) {
+    console.warn('⚠️ Error descargando mvnw, creando script básico:', error.message);
+    
+    // Crear script básico como fallback
+    const mvnwBasic = `#!/bin/sh
+# Maven Wrapper - Script básico
+# Si este script no funciona, descarga uno nuevo con:
+# curl -L "https://raw.githubusercontent.com/takari/maven-wrapper/master/mvnw" -o mvnw
+# chmod +x mvnw
 
-# ----------------------------------------------------------------------------
-# Apache Maven Wrapper startup batch script, version 3.2.0
-#
-# Required ENV vars:
-# JAVA_HOME - location of a JDK home dir
-#
-# Optional ENV vars
-# MAVEN_BATCH_ECHO - set to 'on' to enable the echoing of the batch commands
-# MAVEN_BATCH_PAUSE - set to 'on' to wait for a keystroke before ending
-# MAVEN_OPTS - parameters passed to the Java VM when running Maven
-#     e.g. to debug Maven itself, use
-# set MAVEN_OPTS=-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000
-# MAVEN_SKIP_RC - flag to disable loading of mavenrc files
-# ----------------------------------------------------------------------------
+MAVEN_PROJECTBASEDIR="\${MAVEN_BASEDIR}"
+if [ -z "\${MAVEN_PROJECTBASEDIR}" ]; then
+  MAVEN_PROJECTBASEDIR="\$(pwd)"
+fi
 
-# Begin all REM lines with '@' in case MAVEN_BATCH_ECHO is 'on'
-@echo off
-@REM set title of command window
-title %0
-@REM enable echoing by setting MAVEN_BATCH_ECHO to 'on'
-@if "%MAVEN_BATCH_ECHO%" == "on"  echo %MAVEN_BATCH_ECHO%
+WRAPPER_JAR="\${MAVEN_PROJECTBASEDIR}/.mvn/wrapper/maven-wrapper.jar"
 
-@REM set %HOME% to equivalent of $HOME
-if "%HOME%" == "" (set "HOME=%HOMEDRIVE%%HOMEPATH%")
+if [ ! -f "\${WRAPPER_JAR}" ]; then
+  echo "Error: maven-wrapper.jar no encontrado"
+  exit 1
+fi
 
-@REM Execute a user defined script before this one
-if not "%MAVEN_SKIP_RC%" == "" goto skipRcPre
-@REM check for pre script, once with legacy .bat ending and once with .cmd ending
-if exist "%USERPROFILE%\\mavenrc_pre.bat" call "%USERPROFILE%\\mavenrc_pre.bat" %*
-if exist "%USERPROFILE%\\mavenrc_pre.cmd" call "%USERPROFILE%\\mavenrc_pre.cmd" %*
-:skipRcPre
-
-@setlocal
-
-set ERROR_CODE=0
-
-@REM To isolate internal variables from possible post scripts, we use another setlocal
-@setlocal
-
-@REM ==== START VALIDATION ====
-if not "%JAVA_HOME%" == "" goto OkJHome
-
-echo.
-echo Error: JAVA_HOME not found in your environment. >&2
-echo Please set the JAVA_HOME variable in your environment to match the >&2
-echo location of your Java installation. >&2
-echo.
-goto error
-
-:OkJHome
-if exist "%JAVA_HOME%\\bin\\java.exe" goto init
-
-echo.
-echo Error: JAVA_HOME is set to an invalid directory. >&2
-echo JAVA_HOME = "%JAVA_HOME%" >&2
-echo Please set the JAVA_HOME variable in your environment to match the >&2
-echo location of your Java installation. >&2
-echo.
-goto error
-
-@REM ==== END VALIDATION ====
-
-:init
-
-@REM Find the project base dir, i.e. the directory that contains the folder ".mvn".
-@REM Fallback to current working directory if not found.
-
-set MAVEN_PROJECTBASEDIR=%MAVEN_BASEDIR%
-IF NOT "%MAVEN_PROJECTBASEDIR%"=="" goto endDetectBaseDir
-
-set EXEC_DIR=%CD%
-set WDIR=%EXEC_DIR%
-:findBaseDir
-IF EXIST "%WDIR%"\\.mvn goto baseDirFound
-cd ..
-IF "%WDIR%"=="%CD%" goto baseDirNotFound
-set WDIR=%CD%
-goto findBaseDir
-
-:baseDirFound
-set MAVEN_PROJECTBASEDIR=%WDIR%
-cd "%EXEC_DIR%"
-goto endDetectBaseDir
-
-:baseDirNotFound
-set MAVEN_PROJECTBASEDIR=%EXEC_DIR%
-cd "%EXEC_DIR%"
-
-:endDetectBaseDir
-
-IF NOT EXIST "%MAVEN_PROJECTBASEDIR%\\.mvn\\jvm.config" goto endReadAdditionalConfig
-
-@setlocal EnableExtensions EnableDelayedExpansion
-for /F "usebackq delims=" %%a in ("%MAVEN_PROJECTBASEDIR%\\.mvn\\jvm.config") do set JVM_CONFIG_MAVEN_PROPS=!JVM_CONFIG_MAVEN_PROPS! %%a
-@endlocal & set JVM_CONFIG_MAVEN_PROPS=%JVM_CONFIG_MAVEN_PROPS%
-
-:endReadAdditionalConfig
-
-SET MAVEN_JAVA_EXE="%JAVA_HOME%\\bin\\java.exe"
-set WRAPPER_JAR="%MAVEN_PROJECTBASEDIR%\\.mvn\\wrapper\\maven-wrapper.jar"
-set WRAPPER_LAUNCHER=org.apache.maven.wrapper.MavenWrapperMain
-
-set DOWNLOAD_URL="https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar"
-
-FOR /F "usebackq tokens=1,2 delims==" %%A IN ("%MAVEN_PROJECTBASEDIR%\\.mvn\\wrapper\\maven-wrapper.properties") DO (
-    IF "%%A"=="wrapperUrl" SET DOWNLOAD_URL=%%B
-)
-
-@REM Extension to allow automatically downloading the maven-wrapper.jar from Maven-central
-@REM This allows using the maven wrapper in projects that prohibit checking in binary data.
-if exist %WRAPPER_JAR% (
-    if "%MVNW_VERBOSE%" == "true" (
-        echo Found %WRAPPER_JAR%
-    )
-) else (
-    if not "%MVNW_REPOURL%" == "" (
-        SET DOWNLOAD_URL="%MVNW_REPOURL%/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar"
-    )
-    if "%MVNW_VERBOSE%" == "true" (
-        echo Couldn't find %WRAPPER_JAR%, downloading it ...
-        echo Downloading from: %DOWNLOAD_URL%
-    )
-
-    powershell -Command "&{"^
-		"$webclient = new-object System.Net.WebClient;"^
-		"if (-not ([string]::IsNullOrEmpty('%MVNW_USERNAME%') -and [string]::IsNullOrEmpty('%MVNW_PASSWORD%'))) {"^
-		"$webclient.Credentials = new-object System.Net.NetworkCredential('%MVNW_USERNAME%', '%MVNW_PASSWORD%');"^
-		"}"^
-		"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $webclient.DownloadFile('%DOWNLOAD_URL%', '%WRAPPER_JAR%')"^
-		"}"
-    if "%MVNW_VERBOSE%" == "true" (
-        echo Finished downloading %WRAPPER_JAR%
-    )
-)
-@REM End of extension
-
-@REM Provide a "standardized" way to retrieve the CLI args that will
-@REM work with both Windows and non-Windows executions.
-set MAVEN_CMD_LINE_ARGS=%*
-
-%MAVEN_JAVA_EXE% ^
-  %JVM_CONFIG_MAVEN_PROPS% ^
-  %MAVEN_OPTS% ^
-  %MAVEN_DEBUG_OPTS% ^
-  -classpath %WRAPPER_JAR% ^
-  "-Dmaven.multiModuleProjectDirectory=%MAVEN_PROJECTBASEDIR%" ^
-  %WRAPPER_LAUNCHER% %MAVEN_CMD_LINE_ARGS%
-if ERRORLEVEL 1 goto error
-goto end
-
-:error
-set ERROR_CODE=1
-
-:end
-@endlocal & set ERROR_CODE=%ERROR_CODE%
-
-if not "%MAVEN_SKIP_RC%"=="" goto skipRcPost
-@REM check for post script, once with legacy .bat ending and once with .cmd ending
-if exist "%USERPROFILE%\\mavenrc_post.bat" call "%USERPROFILE%\\mavenrc_post.bat"
-if exist "%USERPROFILE%\\mavenrc_post.cmd" call "%USERPROFILE%\\mavenrc_post.cmd"
-:skipRcPost
-
-@REM pause the script if MAVEN_BATCH_PAUSE is set to 'on'
-if "%MAVEN_BATCH_PAUSE%"=="on" pause
-
-if "%MAVEN_TERMINATE_CMD%"=="on" exit %ERROR_CODE%
-
-cmd /C exit /B %ERROR_CODE%`;
-
-  await fs.writeFile(path.join(projectDir, 'mvnw'), mvnwSh);
+exec java -jar "\${WRAPPER_JAR}" "$@"
+`;
+    
+    await fs.writeFile(mvnwPath, mvnwBasic);
+  }
+  
+  // Dar permisos de ejecución a mvnw (Linux/Mac)
+  try {
+    const { exec } = require('child_process');
+    exec(`chmod +x "${path.join(projectDir, 'mvnw')}"`, () => {});
+  } catch (e) {
+    // Ignorar errores de permisos si no es necesario
+  }
 }
 
-// Crear Dockerfile
-async function createDockerfile(projectDir) {
-  const dockerfileContent = `# Usar imagen base de OpenJDK 17
-FROM openjdk:17-jdk-slim
+// Crear Dockerfile con multi-stage build
+async function createDockerfile(projectDir, serverPort = 8080) {
+  // Obtener el nombre del JAR del pom.xml (normalmente demo-0.0.1-SNAPSHOT.jar)
+  const jarName = 'demo-0.0.1-SNAPSHOT.jar';
+  const appName = 'demo';
+  
+  const dockerfileContent = `# Stage 1: Build
+FROM eclipse-temurin:17-jdk-jammy AS build
 
-# Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar el archivo jar de la aplicación
-COPY target/demo-0.0.1-SNAPSHOT.jar app.jar
+# Copiar Maven Wrapper
+COPY mvnw .
+COPY .mvn .mvn
 
-# Exponer el puerto 8080
-EXPOSE 8080
+# Copiar archivos de configuración Maven
+COPY pom.xml .
+
+# Descargar dependencias (esto se cachea si pom.xml no cambia)
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+
+# Copiar código fuente
+COPY src src
+
+# Compilar y empaquetar la aplicación
+RUN chmod +x mvnw && ./mvnw clean package -DskipTests
+
+# Stage 2: Runtime
+FROM eclipse-temurin:17-jre-jammy
+
+WORKDIR /app
+
+# Copiar el JAR compilado desde el stage de build
+COPY --from=build /app/target/${jarName} app.jar
+
+# Exponer el puerto configurado en application.properties
+EXPOSE ${serverPort}
+
+# Health check (opcional, requiere curl en la imagen base)
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \\
+#   CMD curl -f http://localhost:${serverPort}/actuator/health || exit 1
 
 # Comando para ejecutar la aplicación
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
 # Variables de entorno opcionales
 ENV JAVA_OPTS=""
-ENV SPRING_PROFILES_ACTIVE=prod`;
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV SERVER_PORT=${serverPort}
+ENV SPRING_DATASOURCE_URL=jdbc:h2:mem:testdb
+ENV SPRING_DATASOURCE_USERNAME=sa
+ENV SPRING_DATASOURCE_PASSWORD=password`;
 
   await fs.writeFile(path.join(projectDir, 'Dockerfile'), dockerfileContent);
+}
+
+// Crear .dockerignore
+async function createDockerIgnore(projectDir) {
+  const dockerignoreContent = `target/
+.git/
+.gitignore
+*.md
+.mvn/wrapper/maven-wrapper.jar
+node_modules/
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+temp/
+.env
+.env.local
+application-local.properties`;
+
+  await fs.writeFile(path.join(projectDir, '.dockerignore'), dockerignoreContent);
+}
+
+// Crear docker-compose.yml
+async function createDockerCompose(projectDir, serverPort = 8080) {
+  const dockerComposeContent = `version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "${serverPort}:${serverPort}"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=${serverPort}
+      - SPRING_DATASOURCE_URL=jdbc:h2:mem:testdb
+      - SPRING_DATASOURCE_USERNAME=sa
+      - SPRING_DATASOURCE_PASSWORD=password
+    container_name: spring-boot-container
+    restart: unless-stopped
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${serverPort}/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s`;
+
+  await fs.writeFile(path.join(projectDir, 'docker-compose.yml'), dockerComposeContent);
+}
+
+// Crear scripts de Docker
+async function createDockerScripts(projectDir, serverPort = 8080) {
+  const appName = 'spring-boot-app';
+  const containerName = 'spring-boot-container';
+  
+  // Script start-docker.sh
+  const startDockerSh = `#!/bin/bash
+
+APP_NAME="${appName}"
+CONTAINER_NAME="${containerName}"
+PORT="${serverPort}"
+
+echo "🔨 Compilando proyecto..."
+./mvnw clean package -DskipTests
+
+if [ $? -ne 0 ]; then
+    echo "❌ Error al compilar el proyecto"
+    exit 1
+fi
+
+echo "🐳 Construyendo imagen Docker..."
+docker build -t $APP_NAME .
+
+if [ $? -ne 0 ]; then
+    echo "❌ Error al construir la imagen Docker"
+    exit 1
+fi
+
+# Detener y eliminar contenedor existente si existe
+if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
+    echo "🛑 Deteniendo contenedor existente..."
+    docker stop $CONTAINER_NAME
+    docker rm $CONTAINER_NAME
+fi
+
+echo "🚀 Iniciando contenedor..."
+docker run -d -p $PORT:$PORT --name $CONTAINER_NAME $APP_NAME
+
+if [ $? -eq 0 ]; then
+    echo "✅ Aplicación disponible en http://localhost:$PORT/api"
+    echo "📋 Ver logs: docker logs -f $CONTAINER_NAME"
+    echo "🛑 Detener: docker stop $CONTAINER_NAME"
+else
+    echo "❌ Error al iniciar el contenedor"
+    exit 1
+fi`;
+
+  // Script stop-docker.sh
+  const stopDockerSh = `#!/bin/bash
+
+CONTAINER_NAME="${containerName}"
+
+if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
+    echo "🛑 Deteniendo contenedor..."
+    docker stop $CONTAINER_NAME
+    docker rm $CONTAINER_NAME
+    echo "✅ Contenedor detenido y eliminado"
+else
+    echo "⚠️  No se encontró contenedor con nombre: $CONTAINER_NAME"
+fi`;
+
+  // Script start-docker.bat (Windows)
+  const startDockerBat = `@echo off
+set APP_NAME=${appName}
+set CONTAINER_NAME=${containerName}
+set PORT=${serverPort}
+
+echo 🔨 Compilando proyecto...
+call mvnw.cmd clean package -DskipTests
+
+if %ERRORLEVEL% NEQ 0 (
+    echo ❌ Error al compilar el proyecto
+    pause
+    exit /b 1
+)
+
+echo 🐳 Construyendo imagen Docker...
+docker build -t %APP_NAME% .
+
+if %ERRORLEVEL% NEQ 0 (
+    echo ❌ Error al construir la imagen Docker
+    pause
+    exit /b 1
+)
+
+echo 🛑 Deteniendo contenedor existente si existe...
+docker stop %CONTAINER_NAME% 2>nul
+docker rm %CONTAINER_NAME% 2>nul
+
+echo 🚀 Iniciando contenedor...
+docker run -d -p %PORT%:%PORT% --name %CONTAINER_NAME% %APP_NAME%
+
+if %ERRORLEVEL% EQU 0 (
+    echo ✅ Aplicación disponible en http://localhost:%PORT%/api
+    echo 📋 Ver logs: docker logs -f %CONTAINER_NAME%
+    echo 🛑 Detener: docker stop %CONTAINER_NAME%
+) else (
+    echo ❌ Error al iniciar el contenedor
+    pause
+    exit /b 1
+)
+
+pause`;
+
+  // Script stop-docker.bat (Windows)
+  const stopDockerBat = `@echo off
+set CONTAINER_NAME=${containerName}
+
+docker ps -aq -f name=%CONTAINER_NAME% >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo 🛑 Deteniendo contenedor...
+    docker stop %CONTAINER_NAME%
+    docker rm %CONTAINER_NAME%
+    echo ✅ Contenedor detenido y eliminado
+) else (
+    echo ⚠️  No se encontró contenedor con nombre: %CONTAINER_NAME%
+)
+
+pause`;
+
+  try {
+    await fs.writeFile(path.join(projectDir, 'start-docker.sh'), startDockerSh);
+    await fs.writeFile(path.join(projectDir, 'stop-docker.sh'), stopDockerSh);
+    await fs.writeFile(path.join(projectDir, 'start-docker.bat'), startDockerBat);
+    await fs.writeFile(path.join(projectDir, 'stop-docker.bat'), stopDockerBat);
+    
+    // Dar permisos de ejecución a los scripts de Linux
+    try {
+      const { exec } = require('child_process');
+      exec(`chmod +x "${path.join(projectDir, 'start-docker.sh')}"`, () => {});
+      exec(`chmod +x "${path.join(projectDir, 'stop-docker.sh')}"`, () => {});
+    } catch (e) {
+      // Ignorar errores de permisos
+    }
+  } catch (e) {
+    console.warn('⚠️ Error creando scripts Docker:', e.message);
+  }
 }
 
 // Crear .gitignore
@@ -1962,7 +2095,7 @@ async function createPostmanCollection(projectDir, titulo, entities) {
 }
 
 // Crear README
-async function createReadme(projectDir, titulo, entities) {
+async function createReadme(projectDir, titulo, entities, serverPort = 8080) {
   const readmeContent = `# ${titulo} - Spring Boot API
 
 ## Instalación y Ejecución
@@ -1978,18 +2111,27 @@ async function createReadme(projectDir, titulo, entities) {
    cd ${path.basename(projectDir)}
    \`\`\`
 
-2. Compilar y ejecutar:
+2. Ejecutar la aplicación (sin Docker):
    \`\`\`bash
-   # En Windows:
-   .\\mvnw.cmd clean compile
-   .\\mvnw.cmd spring-boot:run
+   # En Linux/Mac:
+   ./mvnw spring-boot:run
    
+   # En Windows:
+   .\\mvnw.cmd spring-boot:run
+   \`\`\`
+
+   **Nota:** El comando anterior compila y ejecuta la aplicación automáticamente. Si necesitas compilar por separado:
+   \`\`\`bash
    # En Linux/Mac:
    ./mvnw clean compile
    ./mvnw spring-boot:run
+   
+   # En Windows:
+   .\\mvnw.cmd clean compile
+   .\\mvnw.cmd spring-boot:run
    \`\`\`
 
-3. La API estará disponible en: http://localhost:8080
+3. La API estará disponible en: http://localhost:${serverPort}
 
 ### Ejecutar Tests
 \`\`\`bash
@@ -2081,15 +2223,180 @@ El proyecto usa H2 Database (en memoria) para desarrollo:
 - URL JDBC: jdbc:h2:mem:testdb
 - Usuario: sa
 - Contraseña: password
-- Consola H2: http://localhost:8080/h2-console
+- Consola H2: http://localhost:${serverPort}/h2-console
+
+## 🐳 Ejecución con Docker
+
+### Prerrequisitos
+- Docker instalado y corriendo
+- Docker Compose (opcional, pero recomendado)
+
+### Método 1: Scripts de Utilidad (Recomendado)
+
+#### Linux/Mac:
+\`\`\`bash
+# Iniciar aplicación en Docker
+./start-docker.sh
+
+# Detener aplicación
+./stop-docker.sh
+\`\`\`
+
+#### Windows:
+\`\`\`cmd
+# Iniciar aplicación en Docker
+start-docker.bat
+
+# Detener aplicación
+stop-docker.bat
+\`\`\`
+
+### Método 2: Comandos Docker Manuales
+
+#### Paso 1: Compilar el Proyecto
+\`\`\`bash
+./mvnw clean package -DskipTests
+\`\`\`
+
+#### Paso 2: Construir la Imagen Docker
+\`\`\`bash
+docker build -t spring-boot-app .
+\`\`\`
+
+#### Paso 3: Ejecutar el Contenedor
+\`\`\`bash
+docker run -d -p ${serverPort}:${serverPort} --name spring-boot-container spring-boot-app
+\`\`\`
+
+### Método 3: Docker Compose
+
+\`\`\`bash
+# Construir y ejecutar
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Detener
+docker-compose down
+\`\`\`
+
+### Verificar que Esté Corriendo
+
+\`\`\`bash
+# Ver contenedor activo
+docker ps
+
+# Ver logs
+docker logs spring-boot-container
+
+# Seguir logs en tiempo real
+docker logs -f spring-boot-container
+\`\`\`
+
+### Probar los Endpoints
+
+\`\`\`bash
+# Probar endpoint básico
+curl http://localhost:${serverPort}/api/${entities.length > 0 ? entities[0].toLowerCase() : 'entidad'}
+
+# Crear un registro
+curl -X POST http://localhost:${serverPort}/api/${entities.length > 0 ? entities[0].toLowerCase() : 'entidad'} \\
+  -H "Content-Type: application/json" \\
+  -d '{"nombre":"Juan","apellido":"Pérez","email":"juan@example.com"}'
+
+# Obtener por ID
+curl http://localhost:${serverPort}/api/${entities.length > 0 ? entities[0].toLowerCase() : 'entidad'}/1
+
+# Contar registros
+curl http://localhost:${serverPort}/api/${entities.length > 0 ? entities[0].toLowerCase() : 'entidad'}/count
+\`\`\`
+
+### Comandos de Gestión Docker
+
+#### Comandos Básicos
+\`\`\`bash
+# Ver contenedores activos
+docker ps
+
+# Ver todos los contenedores
+docker ps -a
+
+# Ver logs
+docker logs spring-boot-container
+
+# Ver logs en tiempo real
+docker logs -f spring-boot-container
+
+# Detener contenedor
+docker stop spring-boot-container
+
+# Iniciar contenedor
+docker start spring-boot-container
+
+# Reiniciar contenedor
+docker restart spring-boot-container
+
+# Eliminar contenedor
+docker rm spring-boot-container
+
+# Eliminar imagen
+docker rmi spring-boot-app
+\`\`\`
+
+#### Reconstruir Después de Cambios
+\`\`\`bash
+# 1. Detener y eliminar contenedor
+docker stop spring-boot-container
+docker rm spring-boot-container
+
+# 2. Recompilar proyecto
+./mvnw clean package -DskipTests
+
+# 3. Reconstruir imagen
+docker build -t spring-boot-app .
+
+# 4. Ejecutar nuevo contenedor
+docker run -d -p ${serverPort}:${serverPort} --name spring-boot-container spring-boot-app
+\`\`\`
+
+### Problemas Comunes y Soluciones
+
+#### Error: "manifest for openjdk:17-jdk-slim not found"
+**Solución:** El Dockerfile usa \`eclipse-temurin:17-jdk-jammy\` que es la imagen correcta y actualizada.
+
+#### Error: "mvnw: Permission denied"
+**Solución:** 
+\`\`\`bash
+chmod +x mvnw
+\`\`\`
+
+#### Error: "mvnw: command not found" o errores de sintaxis
+**Solución:** Archivo corrupto, descargar nuevo mvnw:
+\`\`\`bash
+rm -f mvnw
+curl -L "https://raw.githubusercontent.com/takari/maven-wrapper/master/mvnw" -o mvnw
+chmod +x mvnw
+\`\`\`
+
+#### Puerto ocupado
+**Solución:** Cambiar puerto en \`application.properties\` y \`Dockerfile\`, o detener el proceso que usa el puerto
+
+#### Contenedor se detiene inmediatamente
+**Solución:** Revisar logs con \`docker logs spring-boot-container\`
 
 ## Configuración
 
 ### Cambiar Puerto
-Si el puerto 8080 está ocupado, modifica \`application.properties\`:
+Si el puerto ${serverPort} está ocupado, modifica \`application.properties\`:
 \`\`\`properties
 server.port=8081
 \`\`\`
+
+**Nota:** Si cambias el puerto, también debes actualizar:
+- \`Dockerfile\` (EXPOSE y ENV SERVER_PORT)
+- \`docker-compose.yml\` (puerto mapeado)
+- Scripts Docker (\`start-docker.sh\`, \`start-docker.bat\`)
 
 ### Cambiar a PostgreSQL (Producción)
 1. Agregar dependencia en \`pom.xml\`:
@@ -2151,9 +2458,11 @@ fi
 \`\`\`
 
 ### Otros Problemas Comunes
-1. **Puerto 8080 ocupado:** Cambiar puerto en \`application.properties\`
+1. **Puerto ${serverPort} ocupado:** Cambiar puerto en \`application.properties\` y archivos Docker
 2. **Error de Java:** Verificar que Java 17+ esté instalado con \`java -version\`
 3. **Problemas de permisos:** En Linux/Mac ejecutar \`chmod +x mvnw\`
+4. **Docker no inicia:** Verificar que Docker esté corriendo con \`docker ps\`
+5. **Error al construir imagen:** Verificar que el proyecto compile correctamente antes de construir la imagen
 
 ## Documentación Adicional
 

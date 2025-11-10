@@ -1,12 +1,13 @@
-// controllers/invitacionController.js
+// Controlador de invitaciones y colaboración en diagramas
 const { Diagrama, DiagramaUsuario, Usuario } = require('../models');
-const { Op, UniqueConstraintError } = require('sequelize'); // Importa los operadores de Sequelize
+const { Op, UniqueConstraintError } = require('sequelize');
 
+// Generar un código aleatorio de 8 caracteres para invitaciones
 function generateUniqueCode() {
   return Math.random().toString(36).substr(2, 8).toUpperCase();
 }
 
-// Función auxiliar para verificar si un usuario es propietario
+// Verificar si un usuario es el dueño de un diagrama
 async function checkIfOwner(diagramaId, userId) {
   try {
     const diagrama = await Diagrama.findByPk(diagramaId);
@@ -16,66 +17,66 @@ async function checkIfOwner(diagramaId, userId) {
   }
 }
 
-// Obtener diagramas donde el usuario está invitado
-
+// Obtener los diagramas donde el usuario ha sido invitado (no es el dueño)
 exports.obtenerDiagramasInvitado = async (req, res) => {
   const userId = req.user.id;
 
   try {
-      // Obtener solo los diagramas donde el usuario ha sido invitado y no es el propietario
-      const invitaciones = await DiagramaUsuario.findAll({
+    // Buscar todas las invitaciones aceptadas del usuario
+    const invitaciones = await DiagramaUsuario.findAll({
+      where: {
+        usuarioId: userId,
+        estado: 'aceptado',
+      },
+      include: [
+        {
+          model: Diagrama,
           where: {
-              usuarioId: userId,
-              estado: 'aceptado',
+            usuarioId: { [Op.ne]: userId }  // Solo diagramas que NO sean del usuario
           },
           include: [
-              {
-                  model: Diagrama,
-                  where: {
-                      usuarioId: { [Op.ne]: userId }  // Filtrar diagramas que no hayas creado tú mismo
-                  },
-                  include: [
-                      {
-                          model: Usuario,
-                          attributes: ['nombre'],
-                          // Elimina 'as: propietario' si no has configurado un alias en el modelo
-                      },
-                  ],
-              },
+            {
+              model: Usuario,
+              attributes: ['nombre'],
+            },
           ],
-      });
+        },
+      ],
+    });
 
-      // Mapear los diagramas invitados
-      const diagramasInvitados = invitaciones.map(inv => ({
-          id: inv.diagramaId,
-          titulo: inv.Diagrama?.titulo, // Asegúrate de que el título exista
-          propietarioNombre: inv.Diagrama?.Usuario?.nombre || 'Propietario no encontrado',
-      }));
+    // Preparar la respuesta con los datos relevantes
+    const diagramasInvitados = invitaciones.map(inv => ({
+      id: inv.diagramaId,
+      titulo: inv.Diagrama?.titulo,
+      propietarioNombre: inv.Diagrama?.Usuario?.nombre || 'Propietario no encontrado',
+    }));
 
-      res.json(diagramasInvitados);
+    res.json(diagramasInvitados);
   } catch (error) {
-      console.error('Error al obtener diagramas invitados:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('Error al obtener diagramas invitados:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-
-// Generar código de invitación
+// Generar un código de invitación para compartir un diagrama
 exports.generarCodigoInvitacion = async (req, res) => {
   const { diagramId } = req.params;
   const userId = req.user.id;
   const { permiso } = req.body; // 'editor' o 'lector'
 
   try {
+    // Verificar que el diagrama existe
     const diagrama = await Diagrama.findByPk(diagramId);
     if (!diagrama) {
       return res.status(404).json({ error: 'Diagrama no encontrado' });
     }
+    
+    // Solo el dueño puede generar códigos de invitación
     if (diagrama.usuarioId !== userId) {
       return res.status(403).json({ error: 'No tienes permiso para generar códigos de invitación para este diagrama' });
     }
 
-    // Invalidar códigos anteriores pendientes para este diagrama
+    // Invalidar códigos anteriores que estén pendientes
     await DiagramaUsuario.update(
       { isValid: false, estado: 'rechazado' },
       { 
@@ -88,11 +89,12 @@ exports.generarCodigoInvitacion = async (req, res) => {
       }
     );
 
+    // Generar nuevo código de invitación
     const codigoInvitacion = generateUniqueCode();
 
     const invitacion = await DiagramaUsuario.create({
       diagramaId: diagramId,
-      usuarioId: null, // El usuario se asigna al aceptar la invitación
+      usuarioId: null, // Se asignará cuando alguien acepte
       permiso,
       estado: 'pendiente',
       codigoInvitacion,
@@ -106,7 +108,7 @@ exports.generarCodigoInvitacion = async (req, res) => {
   }
 };
 
-// Invalidar código de invitación
+// Invalidar (cancelar) un código de invitación
 exports.invalidarCodigoInvitacion = async (req, res) => {
   const { diagramId, codigoInvitacion } = req.params;
   const userId = req.user.id;
@@ -116,6 +118,8 @@ exports.invalidarCodigoInvitacion = async (req, res) => {
     if (!diagrama) {
       return res.status(404).json({ error: 'Diagrama no encontrado' });
     }
+    
+    // Solo el dueño puede invalidar códigos
     if (diagrama.usuarioId !== userId) {
       return res.status(403).json({ error: 'No tienes permiso para invalidar códigos de invitación para este diagrama' });
     }
@@ -125,6 +129,7 @@ exports.invalidarCodigoInvitacion = async (req, res) => {
       return res.status(404).json({ error: 'Código de invitación no encontrado' });
     }
 
+    // Marcar como inválido
     invitacion.isValid = false;
     invitacion.estado = 'rechazado';
     await invitacion.save();
@@ -136,8 +141,7 @@ exports.invalidarCodigoInvitacion = async (req, res) => {
   }
 };
 
-// Obtener usuarios invitados
-// Controlador para obtener los usuarios invitados de un diagrama
+// Obtener la lista de usuarios que tienen acceso a un diagrama
 exports.obtenerUsuariosInvitados = async (req, res) => {
   const { diagramId } = req.params;
 
