@@ -40,7 +40,7 @@ const corsOptions = {
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://18.223.131.235:3000',
-    'https://diagramador1.netlify.app',
+    'https://radiant-cascaron-dc25b1.netlify.app/',
     'https://157-245-1-74.sslip.io'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

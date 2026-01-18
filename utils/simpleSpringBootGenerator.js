@@ -60,14 +60,14 @@ async function generateSimpleSpringBootProject(diagramaJSON, titulo) {
       // Crear entidad JPA con relaciones
       await createEntityClass(modelsDir, entityName, clase, entityMap, relations);
       
-      // Crear DTO
-      await createDTOClass(dtosDir, entityName, clase);
+      // Crear DTO con soporte para llaves foráneas
+      await createDTOClass(dtosDir, entityName, clase, entityMap, relations);
       
       // Crear repositorio
       await createRepositoryClass(repositoriesDir, entityName);
       
-      // Crear servicio
-      await createServiceClass(servicesDir, entityName, clase);
+      // Crear servicio con soporte para relaciones
+      await createServiceClass(servicesDir, entityName, clase, entityMap, relations, entities);
       
       // Crear controlador REST
       await createControllerClass(controllersDir, entityName, clase);
@@ -93,8 +93,8 @@ async function generateSimpleSpringBootProject(diagramaJSON, titulo) {
   // Crear tests automáticos para validar la generación
   await createAutomaticTests(testDir, entities);
   
-  // Crear colección de Postman para pruebas
-  await createPostmanCollection(projectDir, cleanTitulo, entities);
+  // Crear colección de Postman para pruebas con campos reales del diagrama
+  await createPostmanCollection(projectDir, cleanTitulo, entities, entityMap, relations);
   
   console.log(`Proyecto Spring Boot generado: ${projectName}`);
   console.log(`Ubicación: ${projectDir}`);
@@ -159,6 +159,45 @@ function mapJavaType(type) {
   return typeMap[type] || 'String';
 }
 
+// Función helper para detectar si un atributo es una FK de una relación existente
+function isRelatedForeignKey(attributeName, clase, entityMap, relations) {
+  if (!attributeName || !entityMap || !relations) return false;
+  
+  // Obtener relaciones de esta entidad
+  const entityRelations = relations.filter(rel => 
+    rel.source === clase.id || rel.target === clase.id
+  );
+  
+  // Para cada relación, verificar si el atributo podría ser su FK
+  for (const relation of entityRelations) {
+    const isSource = relation.source === clase.id;
+    const relatedClassId = isSource ? relation.target : relation.source;
+    const relatedEntity = entityMap.get(relatedClassId);
+    
+    if (relatedEntity) {
+      const relatedEntityName = relatedEntity.entityName;
+      const lowerAttrName = attributeName.toLowerCase();
+      const lowerEntityName = relatedEntityName.toLowerCase();
+      
+      // Detectar patrones comunes de FK:
+      // - pedido_id, id_pedido, pedidoId, pedidoid
+      // - producto_id, id_producto, productoId, productoid
+      const patterns = [
+        `${lowerEntityName}_id`,
+        `id_${lowerEntityName}`,
+        `${lowerEntityName}id`,
+        `id${lowerEntityName}`
+      ];
+      
+      if (patterns.some(pattern => lowerAttrName === pattern)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
 // Crear clase de entidad JPA con relaciones
 async function createEntityClass(modelsDir, entityName, clase, entityMap, relations) {
   let entityContent = `package com.example.demo.model;
@@ -216,17 +255,20 @@ public class ${entityName} {
     return columnName;
   }
 
-  // Agregar atributos básicos
+  // Agregar atributos básicos (excluyendo FK de relaciones existentes)
   if (clase.attributes && clase.attributes.length > 0) {
     clase.attributes.forEach(attr => {
       const { name, type, isPrimaryKey } = parseAttribute(attr);
+      
       // NO generar campos 'id' duplicados - ya tenemos el campo JPA @Id
-      // También evitar nombres que puedan causar conflictos con relaciones
+      // NO generar campos que son FK de relaciones existentes
+      const isFKFromRelation = isRelatedForeignKey(name, clase, entityMap, relations);
+      
       if (!isPrimaryKey && name && 
           !name.toLowerCase().includes('id_class') && 
           !name.toLowerCase().includes('id_persona') && 
           name.toLowerCase() !== 'id' &&
-          !name.toLowerCase().endsWith('_id') &&
+          !isFKFromRelation &&
           !usedColumnNames.has(name.toLowerCase())) {
         const javaType = mapJavaType(type);
         const columnName = getUniqueColumnName(name.toLowerCase());
@@ -345,12 +387,16 @@ public class ${entityName} {
   if (clase.attributes && clase.attributes.length > 0) {
     clase.attributes.forEach(attr => {
       const { name, type, isPrimaryKey } = parseAttribute(attr);
-      // Solo generar métodos para campos que realmente se crearon (misma lógica que arriba)
+      
+      // Solo generar métodos para campos que realmente se crearon
+      // NO generar métodos para FK de relaciones existentes
+      const isFKFromRelation = isRelatedForeignKey(name, clase, entityMap, relations);
+      
       if (!isPrimaryKey && name && 
           !name.toLowerCase().includes('id_class') && 
           !name.toLowerCase().includes('id_persona') && 
           name.toLowerCase() !== 'id' &&
-          !name.toLowerCase().endsWith('_id')) {
+          !isFKFromRelation) {
         const javaType = mapJavaType(type);
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
         entityContent += `
@@ -399,8 +445,8 @@ public class ${entityName} {
   await fs.writeFile(path.join(modelsDir, `${entityName}.java`), entityContent);
 }
 
-// Crear clase DTO
-async function createDTOClass(dtosDir, entityName, clase) {
+// Crear clase DTO con soporte para llaves foráneas
+async function createDTOClass(dtosDir, entityName, clase, entityMap, relations) {
   let dtoContent = `package com.example.demo.dto;
 
 import jakarta.validation.constraints.*;
@@ -413,17 +459,55 @@ public class ${entityName}DTO {
     private Long id;
 `;
 
-  // Agregar atributos básicos
+  // Agregar atributos básicos (excluyendo FK de relaciones existentes)
   if (clase.attributes && clase.attributes.length > 0) {
     clase.attributes.forEach(attr => {
       const { name, type, isPrimaryKey } = parseAttribute(attr);
+      
       // NO generar campos 'id' duplicados - ya tenemos el campo JPA @Id
-      if (!isPrimaryKey && name && !name.toLowerCase().includes('id_class') && !name.toLowerCase().includes('id_persona') && name.toLowerCase() !== 'id') {
+      // NO generar campos que son FK de relaciones existentes
+      const isFKFromRelation = isRelatedForeignKey(name, clase, entityMap, relations);
+      
+      if (!isPrimaryKey && name && 
+          !name.toLowerCase().includes('id_class') && 
+          !name.toLowerCase().includes('id_persona') && 
+          name.toLowerCase() !== 'id' &&
+          !isFKFromRelation) {
         const javaType = mapJavaType(type);
         dtoContent += `    private ${javaType} ${name};
 `;
       }
     });
+  }
+
+  // Agregar campos para llaves foráneas (relaciones ManyToOne)
+  const entityRelations = relations.filter(rel => 
+    rel.source === clase.id || rel.target === clase.id
+  );
+
+  const foreignKeyFields = [];
+  for (const relation of entityRelations) {
+    const isSource = relation.source === clase.id;
+    const relatedClassId = isSource ? relation.target : relation.source;
+    const relatedEntity = entityMap.get(relatedClassId);
+    
+    if (relatedEntity) {
+      const relatedEntityName = relatedEntity.entityName;
+      const fieldName = relatedEntityName.toLowerCase();
+      
+      // Solo agregar campos ID para relaciones ManyToOne (no para OneToMany)
+      const isManyToOne = 
+        (relation.type === 'Asociación' && relation.multiplicidadOrigen === '1' && !isSource) ||
+        (relation.type === 'Agregación' && !isSource) ||
+        (relation.type === 'Generalización' && !isSource) ||
+        (relation.type === 'Uno a Muchos' && !isSource);
+      
+      if (isManyToOne && !foreignKeyFields.includes(fieldName)) {
+        foreignKeyFields.push(fieldName);
+        dtoContent += `    private Long ${fieldName}Id;
+`;
+      }
+    }
   }
 
   dtoContent += `
@@ -439,12 +523,20 @@ public class ${entityName}DTO {
         this.id = id;
     }`;
 
-  // Generar getters y setters para atributos
+  // Generar getters y setters para atributos (excluyendo FK de relaciones)
   if (clase.attributes && clase.attributes.length > 0) {
     clase.attributes.forEach(attr => {
       const { name, type, isPrimaryKey } = parseAttribute(attr);
+      
       // NO generar métodos para campos 'id' - ya tenemos los métodos JPA
-      if (!isPrimaryKey && name && !name.toLowerCase().includes('id_class') && !name.toLowerCase().includes('id_persona') && name.toLowerCase() !== 'id') {
+      // NO generar métodos para FK de relaciones existentes
+      const isFKFromRelation = isRelatedForeignKey(name, clase, entityMap, relations);
+      
+      if (!isPrimaryKey && name && 
+          !name.toLowerCase().includes('id_class') && 
+          !name.toLowerCase().includes('id_persona') && 
+          name.toLowerCase() !== 'id' &&
+          !isFKFromRelation) {
         const javaType = mapJavaType(type);
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
         dtoContent += `
@@ -458,6 +550,20 @@ public class ${entityName}DTO {
     }`;
       }
     });
+  }
+
+  // Generar getters y setters para campos de llaves foráneas
+  for (const fieldName of foreignKeyFields) {
+    const capitalizedName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+    dtoContent += `
+
+    public Long get${capitalizedName}Id() {
+        return ${fieldName}Id;
+    }
+
+    public void set${capitalizedName}Id(Long ${fieldName}Id) {
+        this.${fieldName}Id = ${fieldName}Id;
+    }`;
   }
 
   dtoContent += `
@@ -498,8 +604,8 @@ public interface ${entityName}Repository extends JpaRepository<${entityName}, Lo
   await fs.writeFile(path.join(repositoriesDir, `${entityName}Repository.java`), repositoryContent);
 }
 
-// Función para generar mapeos de campos dinámicamente
-function generateFieldMappings(clase, mappingType) {
+// Función para generar mapeos de campos dinámicamente incluyendo relaciones
+function generateFieldMappings(clase, mappingType, entityMap, relations) {
   let mappings = '';
   
   // Crear el mismo Set que se usa en createEntityClass para mantener consistencia
@@ -510,11 +616,14 @@ function generateFieldMappings(clase, mappingType) {
       const { name, type, isPrimaryKey } = parseAttribute(attr);
       
       // Usar exactamente la misma lógica que en createEntityClass
+      // NO mapear campos que son FK de relaciones existentes
+      const isFKFromRelation = isRelatedForeignKey(name, clase, entityMap, relations);
+      
       if (!isPrimaryKey && name && 
           !name.toLowerCase().includes('id_class') && 
           !name.toLowerCase().includes('id_persona') && 
           name.toLowerCase() !== 'id' &&
-          !name.toLowerCase().endsWith('_id') &&
+          !isFKFromRelation &&
           !usedColumnNames.has(name.toLowerCase())) {
         
         // Agregar el nombre a usedColumnNames para mantener consistencia
@@ -545,13 +654,95 @@ function generateFieldMappings(clase, mappingType) {
     });
   }
   
+  // Agregar mapeos para relaciones ManyToOne
+  if (entityMap && relations) {
+    const entityRelations = relations.filter(rel => 
+      rel.source === clase.id || rel.target === clase.id
+    );
+
+    for (const relation of entityRelations) {
+      const isSource = relation.source === clase.id;
+      const relatedClassId = isSource ? relation.target : relation.source;
+      const relatedEntity = entityMap.get(relatedClassId);
+      
+      if (relatedEntity) {
+        const relatedEntityName = relatedEntity.entityName;
+        const fieldName = relatedEntityName.toLowerCase();
+        const capitalizedFieldName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+        
+        // Solo mapear relaciones ManyToOne (no OneToMany)
+        const isManyToOne = 
+          (relation.type === 'Asociación' && relation.multiplicidadOrigen === '1' && !isSource) ||
+          (relation.type === 'Agregación' && !isSource) ||
+          (relation.type === 'Generalización' && !isSource) ||
+          (relation.type === 'Uno a Muchos' && !isSource);
+        
+        if (isManyToOne) {
+          switch (mappingType) {
+            case 'entityToDTO':
+              mappings += `        dto.set${capitalizedFieldName}Id(entity.get${capitalizedFieldName}() != null ? entity.get${capitalizedFieldName}().getId() : null);\n`;
+              break;
+              
+            case 'dtoToEntity':
+              mappings += `        if (dto.get${capitalizedFieldName}Id() != null) {\n`;
+              mappings += `            ${relatedEntityName} ${fieldName} = ${fieldName}Repository.findById(dto.get${capitalizedFieldName}Id()).orElse(null);\n`;
+              mappings += `            entity.set${capitalizedFieldName}(${fieldName});\n`;
+              mappings += `        }\n`;
+              break;
+              
+            case 'updateEntity':
+              mappings += `        if (dto.get${capitalizedFieldName}Id() != null) {\n`;
+              mappings += `            ${relatedEntityName} ${fieldName} = ${fieldName}Repository.findById(dto.get${capitalizedFieldName}Id()).orElse(null);\n`;
+              mappings += `            entity.set${capitalizedFieldName}(${fieldName});\n`;
+              mappings += `        }\n`;
+              break;
+              
+            case 'partialUpdateEntity':
+              mappings += `        if (dto.get${capitalizedFieldName}Id() != null) {\n`;
+              mappings += `            ${relatedEntityName} ${fieldName} = ${fieldName}Repository.findById(dto.get${capitalizedFieldName}Id()).orElse(null);\n`;
+              mappings += `            entity.set${capitalizedFieldName}(${fieldName});\n`;
+              mappings += `        }\n`;
+              break;
+          }
+        }
+      }
+    }
+  }
+  
   return mappings;
 }
 
-// Crear clase de servicio
-async function createServiceClass(servicesDir, entityName, clase) {
+// Crear clase de servicio con soporte para relaciones
+async function createServiceClass(servicesDir, entityName, clase, entityMap, relations, entities) {
   
-  const serviceContent = `package com.example.demo.service;
+  // Determinar qué repositorios adicionales necesitamos inyectar
+  const entityRelations = relations.filter(rel => 
+    rel.source === clase.id || rel.target === clase.id
+  );
+
+  const relatedRepositories = new Set();
+  for (const relation of entityRelations) {
+    const isSource = relation.source === clase.id;
+    const relatedClassId = isSource ? relation.target : relation.source;
+    const relatedEntity = entityMap.get(relatedClassId);
+    
+    if (relatedEntity) {
+      const relatedEntityName = relatedEntity.entityName;
+      
+      // Solo agregar repositorios para relaciones ManyToOne
+      const isManyToOne = 
+        (relation.type === 'Asociación' && relation.multiplicidadOrigen === '1' && !isSource) ||
+        (relation.type === 'Agregación' && !isSource) ||
+        (relation.type === 'Generalización' && !isSource) ||
+        (relation.type === 'Uno a Muchos' && !isSource);
+      
+      if (isManyToOne) {
+        relatedRepositories.add(relatedEntityName);
+      }
+    }
+  }
+
+  let imports = `package com.example.demo.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -561,14 +752,34 @@ import com.example.demo.dto.${entityName}DTO;
 import com.example.demo.repository.${entityName}Repository;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.stream.Collectors;`;
+
+  // Agregar imports para entidades y repositorios relacionados
+  for (const relatedEntityName of relatedRepositories) {
+    imports += `
+import com.example.demo.model.${relatedEntityName};
+import com.example.demo.repository.${relatedEntityName}Repository;`;
+  }
+
+  let repositoryInjections = `
+    @Autowired
+    private ${entityName}Repository repository;`;
+
+  // Agregar inyecciones de repositorios relacionados
+  for (const relatedEntityName of relatedRepositories) {
+    const fieldName = relatedEntityName.toLowerCase();
+    repositoryInjections += `
+
+    @Autowired
+    private ${relatedEntityName}Repository ${fieldName}Repository;`;
+  }
+  
+  const serviceContent = imports + `
 
 @Service
 @Transactional
 public class ${entityName}Service {
-    
-    @Autowired
-    private ${entityName}Repository repository;
+    ` + repositoryInjections + `
 
     // Obtener todos los registros
     @Transactional(readOnly = true)
@@ -636,7 +847,7 @@ public class ${entityName}Service {
         dto.setId(entity.getId());
         
         // Mapear todos los campos específicos de la entidad
-        ${generateFieldMappings(clase, 'entityToDTO')}
+        ${generateFieldMappings(clase, 'entityToDTO', entityMap, relations)}
         
         return dto;
     }
@@ -647,7 +858,7 @@ public class ${entityName}Service {
         entity.setId(dto.getId());
         
         // Mapear todos los campos específicos del DTO
-        ${generateFieldMappings(clase, 'dtoToEntity')}
+        ${generateFieldMappings(clase, 'dtoToEntity', entityMap, relations)}
         
         return entity;
     }
@@ -655,7 +866,7 @@ public class ${entityName}Service {
     // Actualizar Entity desde DTO (completo)
     private void updateEntityFromDTO(${entityName} entity, ${entityName}DTO dto) {
         // Actualizar todos los campos específicos de la entidad
-        ${generateFieldMappings(clase, 'updateEntity')}
+        ${generateFieldMappings(clase, 'updateEntity', entityMap, relations)}
     }
 
     // Actualización parcial de Entity desde DTO
@@ -666,7 +877,7 @@ public class ${entityName}Service {
         }
         
         // Actualizar campos específicos solo si no son nulos
-        ${generateFieldMappings(clase, 'partialUpdateEntity')}
+        ${generateFieldMappings(clase, 'partialUpdateEntity', entityMap, relations)}
     }
 }`;
 
@@ -1935,7 +2146,97 @@ server.port=0`;
 }
 
 // Crear colección de Postman para pruebas
-async function createPostmanCollection(projectDir, titulo, entities) {
+// Crear colección de Postman para pruebas con campos reales del diagrama
+async function createPostmanCollection(projectDir, titulo, entities, entityMap, relations) {
+  
+  // Función helper para generar ejemplo de DTO con campos reales
+  function generateExampleDTO(entityName, entityMap, relations, includeId = false) {
+    const example = {};
+    
+    if (includeId) {
+      example.id = 1;
+    }
+    
+    // Buscar la clase correspondiente al entityName
+    let clase = null;
+    for (const [id, entityInfo] of entityMap.entries()) {
+      if (entityInfo.entityName === entityName) {
+        clase = entityInfo;
+        break;
+      }
+    }
+    
+    if (!clase) return example;
+    
+    // Agregar atributos básicos (excluyendo FK de relaciones)
+    if (clase.attributes && clase.attributes.length > 0) {
+      clase.attributes.forEach(attr => {
+        const { name, type, isPrimaryKey } = parseAttribute(attr);
+        const isFKFromRelation = isRelatedForeignKey(name, clase, entityMap, relations);
+        
+        if (!isPrimaryKey && name && 
+            !name.toLowerCase().includes('id_class') && 
+            !name.toLowerCase().includes('id_persona') && 
+            name.toLowerCase() !== 'id' &&
+            !isFKFromRelation) {
+          
+          // Generar valor de ejemplo según el tipo
+          switch (type) {
+            case 'Integer':
+            case 'Long':
+              example[name] = 100;
+              break;
+            case 'BigDecimal':
+              example[name] = 99.99;
+              break;
+            case 'Boolean':
+              example[name] = true;
+              break;
+            case 'LocalDate':
+              example[name] = '2024-01-01';
+              break;
+            case 'LocalDateTime':
+              example[name] = '2024-01-01T10:00:00';
+              break;
+            case 'Date':
+              example[name] = '2024-01-01';
+              break;
+            default:
+              example[name] = `Ejemplo ${name}`;
+          }
+        }
+      });
+    }
+    
+    // Agregar campos de FK (relaciones ManyToOne)
+    const entityRelations = relations.filter(rel => 
+      rel.source === clase.id || rel.target === clase.id
+    );
+    
+    for (const relation of entityRelations) {
+      const isSource = relation.source === clase.id;
+      const relatedClassId = isSource ? relation.target : relation.source;
+      const relatedEntity = entityMap.get(relatedClassId);
+      
+      if (relatedEntity) {
+        const relatedEntityName = relatedEntity.entityName;
+        const fieldName = relatedEntityName.toLowerCase();
+        
+        const isManyToOne = 
+          (relation.type === 'Asociación' && relation.multiplicidadOrigen === '1' && !isSource) ||
+          (relation.type === 'Agregación' && !isSource) ||
+          (relation.type === 'Generalización' && !isSource) ||
+          (relation.type === 'Uno a Muchos' && !isSource);
+        
+        if (isManyToOne) {
+          example[`${fieldName}Id`] = 1;
+        }
+      }
+    }
+    
+    return example;
+  }
+  
   const postmanCollection = {
     "info": {
       "name": `${titulo} - Spring Boot API`,
@@ -1993,10 +2294,7 @@ async function createPostmanCollection(projectDir, titulo, entities) {
             ],
             "body": {
               "mode": "raw",
-              "raw": JSON.stringify({
-                "name": `Ejemplo ${entity}`,
-                "description": "Descripción de ejemplo"
-              }, null, 2)
+              "raw": JSON.stringify(generateExampleDTO(entity, entityMap, relations, false), null, 2)
             },
             "url": {
               "raw": "{{baseUrl}}/${entity.toLowerCase()}",
@@ -2018,11 +2316,7 @@ async function createPostmanCollection(projectDir, titulo, entities) {
             ],
             "body": {
               "mode": "raw",
-              "raw": JSON.stringify({
-                "id": 1,
-                "name": `${entity} Actualizado`,
-                "description": "Descripción actualizada"
-              }, null, 2)
+              "raw": JSON.stringify(generateExampleDTO(entity, entityMap, relations, true), null, 2)
             },
             "url": {
               "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
@@ -2044,9 +2338,16 @@ async function createPostmanCollection(projectDir, titulo, entities) {
             ],
             "body": {
               "mode": "raw",
-              "raw": JSON.stringify({
-                "name": `${entity} Parcialmente Actualizado`
-              }, null, 2)
+              "raw": (() => {
+                const fullExample = generateExampleDTO(entity, entityMap, relations, false);
+                const keys = Object.keys(fullExample);
+                if (keys.length > 0) {
+                  const partialExample = {};
+                  partialExample[keys[0]] = fullExample[keys[0]];
+                  return JSON.stringify(partialExample, null, 2);
+                }
+                return JSON.stringify({ "field": "value" }, null, 2);
+              })()
             },
             "url": {
               "raw": "{{baseUrl}}/${entity.toLowerCase()}/1",
